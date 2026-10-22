@@ -309,6 +309,11 @@ export interface RefundDoc {
   amountMinor: number;
   currency: CurrencyCode;
   reason: string;
+  /** false for refunds of money that never reached the ledger (late/duplicate payments on cancelled orders). */
+  postLedger: boolean;
+  /** Set when created by policy rather than a person (e.g. customer cancelled before fulfilment). */
+  system?: boolean;
+  failureReason?: string;
   status: RefundStatus;
   requestedBy: ObjectId;
   decidedBy?: ObjectId;

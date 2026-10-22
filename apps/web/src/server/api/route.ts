@@ -20,6 +20,10 @@ export interface Reply {
   cookies?: string[];
   /** Overrides the default private `no-store` policy. Only for reviewed public responses. */
   cache?: string;
+  /** Non-JSON response (webhook acknowledgements that providers expect verbatim). */
+  raw?: { body: string; contentType: string };
+  /** Redirect target (303). */
+  redirectTo?: string;
 }
 
 export const ok = (data: unknown, meta?: Record<string, unknown>, extra: Partial<Reply> = {}): Reply => ({ status: 200, data, meta, ...extra });
@@ -40,6 +44,8 @@ export interface Ctx<P> {
   /** True when the credential came from a cookie (web), false for bearer tokens (mobile). */
   cookieAuth: boolean;
   body<T>(schema: ZodType<T>): Promise<T>;
+  /** Exact request bytes as text (signature checks need them). Size-limited. */
+  rawBody(): Promise<string>;
   query<T>(schema: ZodType<T>): T;
   header(name: string): string | null;
 }
@@ -179,6 +185,7 @@ export function route<P extends Record<string, string> = Record<string, string>>
         params: await nextCtx.params,
         actor: actor as Actor,
         header: (n) => req.headers.get(n),
+        rawBody: () => readRawBody(req, maxBody),
         async body<T>(schema: ZodType<T>) {
           bodyCache ??= readBody(req, maxBody);
           const result = schema.safeParse(await bodyCache);
@@ -195,6 +202,14 @@ export function route<P extends Record<string, string> = Record<string, string>>
       const headers = new Headers({ "x-request-id": requestId, "cache-control": reply.cache ?? "no-store", ...(reply.headers ?? {}) });
       for (const c of reply.cookies ?? []) headers.append("set-cookie", c);
       logger.info("request", { requestId, route: opts.name, method: req.method, status: reply.status, durationMs: Date.now() - started, actorId });
+      if (reply.redirectTo) {
+        headers.set("location", reply.redirectTo);
+        return new Response(null, { status: 303, headers });
+      }
+      if (reply.raw) {
+        headers.set("content-type", reply.raw.contentType);
+        return new Response(reply.raw.body, { status: reply.status, headers });
+      }
       if (reply.status === 204) return new Response(null, { status: 204, headers });
       headers.set("content-type", "application/json");
       const payload = reply.data === undefined ? {} : { data: reply.data };

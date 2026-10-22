@@ -9,6 +9,8 @@ import { toQuoteDto } from "@/server/modules/checkout/quote";
 import { placeOrder, quoteCheckout } from "@/server/modules/checkout/service";
 import { requireIdempotencyKey, withIdempotency } from "@/server/modules/idempotency/idempotency";
 import { cancelOrder, getOrder, listOrders } from "@/server/modules/orders/service";
+import { initiatePayment } from "@/server/modules/payments/service";
+import { AppError } from "@/server/shared/errors";
 
 const objectIdStr = z.string().regex(/^[0-9a-f]{24}$/i);
 const qty = z.number().int().min(1).max(MAX_QTY_PER_LINE);
@@ -72,7 +74,18 @@ export const checkoutHandler = route(
     const b = await ctx.body(checkoutBody);
     const res = await withIdempotency({ actorScope: ctx.actor.userId.toHexString(), operation: "checkout", key, request: b }, async () => {
       const order = await placeOrder(ctx.actor, { addressId: parseObjectId(b.addressId, "addressId"), paymentMethod: b.paymentMethod, expectedTotalMinor: b.expectedTotalMinor });
-      return { status: 201, body: order };
+      if (b.paymentMethod === "cod") return { status: 201, body: { ...order, payment: null } };
+      // The order is committed; only now talk to the provider (never inside the DB transaction). A provider failure
+      // does not lose the order: the response says how to retry and the stored attempt is reconciled.
+      let payment: unknown;
+      try {
+        payment = await initiatePayment(ctx.actor.userId, parseObjectId(order.id));
+      } catch (e) {
+        // Never let a late failure make the client retry into a SECOND order: report the order and how to retry payment.
+        if (!(e instanceof AppError)) throw e;
+        payment = { status: "failed", canRetry: true, message: "We could not start the payment. Try again from your order." };
+      }
+      return { status: 201, body: { ...order, payment } };
     });
     return { status: res.status, data: res.body, headers: res.replayed ? { "Idempotent-Replayed": "true" } : undefined };
   },

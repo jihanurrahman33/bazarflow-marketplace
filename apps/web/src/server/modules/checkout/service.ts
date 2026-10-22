@@ -11,6 +11,7 @@ import type { Actor } from "@/server/modules/authorization/actor";
 import { getOwnedAddress } from "@/server/modules/addresses/service";
 import { reserveLines, settleReservation } from "@/server/modules/inventory/service";
 import { toOrderDto } from "@/server/modules/orders/dto";
+import { getPaymentAdapter } from "@/server/modules/payments/registry";
 import { buildQuote, toQuoteDto, type Quote } from "./quote";
 
 export interface CheckoutInput {
@@ -55,6 +56,12 @@ export async function placeOrder(actor: Actor, input: CheckoutInput) {
   const cart = await c.carts.findOne({ userId: actor.userId });
   const quote = await buildQuote(cart?.lines ?? [], address.district);
   assertQuoteOrderable(quote);
+  if (input.paymentMethod === "online") {
+    const caps = getPaymentAdapter().capabilities();
+    if (quote.totals.totalMinor < caps.minAmountMinor || quote.totals.totalMinor > caps.maxAmountMinor) {
+      throw new AppError("BUSINESS_RULE_VIOLATION", { message: "This order total cannot be paid online.", details: [{ field: "total", code: "AMOUNT_OUT_OF_RANGE" }] });
+    }
+  }
   if (quote.totals.totalMinor !== input.expectedTotalMinor) {
     throw new AppError("PRICE_CHANGED", { message: "Prices or shipping changed. Review your order.", details: [{ field: "expectedTotalMinor", code: "MISMATCH" }] });
   }

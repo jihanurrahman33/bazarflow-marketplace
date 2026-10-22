@@ -4,6 +4,8 @@ loadDotEnv();
 const { processOutbox } = await import("../src/server/modules/outbox/outbox");
 const { outboxHandlers } = await import("../src/server/modules/outbox/handlers");
 const { expireUnpaidOrders } = await import("../src/server/modules/orders/service");
+const { reconcileStuckPayments } = await import("../src/server/modules/payments/service");
+const { retryProcessingRefunds } = await import("../src/server/modules/payments/refunds");
 const { closeClient } = await import("../src/server/db/client");
 
 const once = process.argv.includes("--once");
@@ -16,6 +18,10 @@ process.on("SIGTERM", () => (stopping = true));
 async function maintenance() {
   const cancelled = await expireUnpaidOrders();
   if (cancelled) console.log(JSON.stringify({ job: "expireUnpaidOrders", cancelled }));
+  const reconciled = await reconcileStuckPayments();
+  if (reconciled) console.log(JSON.stringify({ job: "reconcileStuckPayments", reconciled }));
+  const refunds = await retryProcessingRefunds();
+  if (refunds) console.log(JSON.stringify({ job: "retryProcessingRefunds", refunds }));
 }
 
 let lastMaintenance = 0;

@@ -25,6 +25,10 @@ const schema = z
     STOCK_RESERVATION_TTL_MINUTES: z.coerce.number().int().min(1).max(1440).default(30),
     DEFAULT_COMMISSION_BPS: z.coerce.number().int().min(0).max(10000).default(1000),
     /** Cash on delivery is opt-in: only enable once operations can actually collect and reconcile cash. */
+    /** Refunds at or above this amount (minor units) need a second admin (maker-checker). 0 disables the threshold. */
+    REFUND_MAKER_CHECKER_MINOR: z.coerce.number().int().min(0).default(500000),
+    PAYMENT_RECONCILE_AFTER_MINUTES: z.coerce.number().int().min(1).max(1440).default(10),
+    PAYOUT_HOLD_DAYS: z.coerce.number().int().min(0).max(90).default(7),
     COD_ENABLED: z.enum(["true", "false"]).default("false").transform((v) => v === "true"),
   })
   .superRefine((env, ctx) => {
