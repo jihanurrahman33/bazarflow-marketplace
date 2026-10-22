@@ -20,6 +20,14 @@ export const metadata: Metadata = {
   description: "A multi-vendor marketplace: discover products from independent sellers, pay securely and track every order.",
   metadataBase: new URL(process.env.APP_ORIGIN ?? "http://localhost:3000"),
   openGraph: { siteName: "BazarFlow", type: "website" },
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico", sizes: "32x32" },
+    ],
+    shortcut: "/favicon.ico",
+    apple: "/icon.svg",
+  },
 };
 export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover" };
 
