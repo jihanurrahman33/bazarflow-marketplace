@@ -4,7 +4,7 @@ import { setupTestDb, teardownTestDb } from "./helpers/db";
 import { call } from "./helpers/http";
 import { makeAdmin, makeCategory, makeCustomer, makeProduct, makeVendor, uniq, useFakeMedia } from "./helpers/factory";
 import {
-  addCartItemHandler, cancelOrderHandler, checkoutHandler, createAddressHandler, getOrderHandler,
+  addCartItemHandler, cancelOrderHandler, checkoutHandler, createAddressHandler,
 } from "@/server/api/handlers/shopping";
 import {
   adminApproveRefundHandler, adminListRefundsHandler, adminReconcileHandler, adminRejectRefundHandler, adminRequestRefundHandler, adminRetryRefundHandler,
