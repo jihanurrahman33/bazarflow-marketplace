@@ -13,6 +13,7 @@ export async function getClient(): Promise<MongoClient> {
   holder.promise ??= new MongoClient(getEnv().MONGODB_URI, {
     maxPoolSize: 20,
     retryWrites: true,
+    ignoreUndefined: true, // optional fields must be absent, never null
     serverSelectionTimeoutMS: 10_000,
   })
     .connect()

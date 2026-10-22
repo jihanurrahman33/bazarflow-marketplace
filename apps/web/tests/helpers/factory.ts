@@ -53,3 +53,60 @@ export async function makeVendor(opts: { name?: string; slug?: string } = {}) {
   const { tokens } = await login({ email: user!.email, password: PASSWORD, device: { platform: "android" } });
   return { user: { ...customer, token: tokens.accessToken }, vendorId: new ObjectId(vendor.id), slug, vendor };
 }
+
+// ---------- catalog helpers ----------
+import { call } from "./http";
+import { createCategoryHandler, approveProductHandler } from "@/server/api/handlers/catalog";
+import { createProductHandler, patchProductHandler, submitReviewHandler } from "@/server/api/handlers/vendor-catalog";
+import { FakeMediaProvider, setMediaProvider, vendorMediaFolder } from "@/server/modules/media/cloudinary";
+
+export const media = new FakeMediaProvider();
+
+export function useFakeMedia() {
+  setMediaProvider(media);
+}
+
+export async function makeCategory(admin: { token: string }, name = uniq("Cat"), parentId?: string) {
+  const r = await call(createCategoryHandler, { method: "POST", token: admin.token, body: { name, slug: name.toLowerCase().replace(/[^a-z0-9]+/g, "-"), parentId } });
+  if (r.status !== 201) throw new Error("category failed: " + JSON.stringify(r.json));
+  return r.data as { id: string; slug: string; name: string };
+}
+
+export interface ProductSpec {
+  title?: string;
+  priceMinor?: number;
+  stock?: number;
+  categoryId: string;
+  variants?: { sku: string; optionValues?: Record<string, string>; priceMinor: number; initialStock: number }[];
+  options?: { name: string; values: string[] }[];
+  publish?: boolean;
+  admin?: { token: string };
+}
+
+/** Creates a product through the real API; optionally runs the whole review -> publish flow. */
+export async function makeProduct(vendor: { user: { token: string }; vendorId: ObjectId }, spec: ProductSpec) {
+  const sku = uniq("SKU").toUpperCase();
+  const r = await call(createProductHandler, {
+    method: "POST", token: vendor.user.token,
+    body: {
+      title: spec.title ?? "Cotton T-Shirt " + sku, description: "A comfortable everyday cotton t-shirt.", categoryIds: [spec.categoryId],
+      options: spec.options ?? [],
+      variants: spec.variants ?? [{ sku, optionValues: {}, priceMinor: spec.priceMinor ?? 150000, initialStock: spec.stock ?? 10 }],
+    },
+  });
+  if (r.status !== 201) throw new Error("product create failed: " + JSON.stringify(r.json));
+  const product = r.data;
+  if (spec.publish) {
+    const publicId = `${vendorMediaFolder(vendor.vendorId.toHexString())}/${uniq("img")}`;
+    media.assets.add(publicId);
+    const p = await call(patchProductHandler, { method: "PATCH", token: vendor.user.token, params: { id: product.id }, body: { media: [{ publicId }] } });
+    if (p.status !== 200) throw new Error("media failed: " + JSON.stringify(p.json));
+    const s = await call(submitReviewHandler, { method: "POST", token: vendor.user.token, params: { id: product.id } });
+    if (s.status !== 200) throw new Error("submit failed: " + JSON.stringify(s.json));
+    const admin = spec.admin ?? (await makeAdmin());
+    const a = await call(approveProductHandler, { method: "POST", token: admin.token, params: { id: product.id } });
+    if (a.status !== 200) throw new Error("approve failed: " + JSON.stringify(a.json));
+    return a.data as typeof product;
+  }
+  return product;
+}
