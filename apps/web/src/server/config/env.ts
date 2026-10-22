@@ -44,6 +44,11 @@ const schema = z
     SUPPORT_CONTACT: z.string().min(3).default("support@bazarflow.example"),
     /** Raw questions are NOT logged unless a documented purpose/consent/retention plan exists. */
     SUPPORT_LOG_QUESTIONS: z.enum(["true", "false"]).default("false").transform((v) => v === "true"),
+    /** Outbound email via any SMTP server, e.g. smtps://user:pass@smtp.example.com:465 . Unset = emails are NOT sent. */
+    SMTP_URL: z.string().optional(),
+    MAIL_FROM: z.string().min(5).default("BazarFlow <no-reply@bazarflow.example>"),
+    /** Firebase service-account JSON (as a string) for server-side push. Unset = push is NOT sent (inbox still works). */
+    FCM_SERVICE_ACCOUNT_JSON: z.string().optional(),
     COD_ENABLED: z.enum(["true", "false"]).default("false").transform((v) => v === "true"),
   })
   .superRefine((env, ctx) => {
