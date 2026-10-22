@@ -93,9 +93,9 @@ async function MoreFrom({ id, vendor, category }: { id: string; vendor?: string;
   const storeOnly = fromStore?.ok ? fromStore.value.items.filter((p) => !shown.has(p.id)) : [];
   return (
     <>
-      {bought.length >= 3 && <ProductRail title="Customers also bought" items={bought} />}
-      <ProductRail title="Similar items" href={category ? `/category/${category}` : undefined} items={similar} />
-      <ProductRail title="More from this store" href={vendor ? `/vendors/${vendor}` : undefined} items={storeOnly} />
+      {bought.length >= 3 && <ProductRail title="Customers also bought" items={bought} source="also_bought" />}
+      <ProductRail title="Similar items" href={category ? `/category/${category}` : undefined} items={similar} source="similar" />
+      <ProductRail title="More from this store" href={vendor ? `/vendors/${vendor}` : undefined} items={storeOnly} source="same_store" />
     </>
   );
 }

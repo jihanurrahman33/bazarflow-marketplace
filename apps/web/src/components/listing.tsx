@@ -3,6 +3,7 @@ import { getCategories, getProducts } from "@/lib/server-data";
 import type { ProductSort } from "@/server/modules/catalog/public";
 import { IconFilter } from "./icons";
 import { InfiniteProducts } from "./infinite-products";
+import { TrackSearch } from "./track-view";
 import { ProductCard } from "./product-card";
 import { EmptyState } from "./ui";
 
@@ -50,6 +51,7 @@ export async function Listing({ base, params, heading }: { base: string; params:
     vendor: params.vendor ?? (base.startsWith("/vendors/") ? base.slice("/vendors/".length) : undefined), sort, limit: "24",
     minPrice: asInt(params.minPrice)?.toString(), maxPrice: asInt(params.maxPrice)?.toString(),
   }).filter((e): e is [string, string] => !!e[1])).toString();
+  const source = base === "/search" ? "search" : base.startsWith("/vendors/") ? "store" : "category";
   const activeCategory = base.startsWith("/category/") ? base.slice("/category/".length) : params.category;
   const chips = [
     params.q && { label: `“${params.q}”`, to: href(base, params, { q: undefined, cursor: undefined }) },
@@ -124,12 +126,13 @@ export async function Listing({ base, params, heading }: { base: string; params:
           </EmptyState>
         ) : (
           <>
-            <div className="grid grid-products">{result.value.items.map((p, i) => <ProductCard key={p.id} p={p} priority={i < 4} />)}</div>
+            {params.q && !params.cursor && <TrackSearch query={params.q} results={result.value.items.length} />}
+            <div className="grid grid-products">{result.value.items.map((p, i) => <ProductCard key={p.id} p={p} priority={i < 4} source={source} />)}</div>
             <nav className="row-between" aria-label="Pagination">
               {params.cursor ? <Link href={href(base, params, { cursor: undefined })} className="btn">← First page</Link> : <span />}
               {result.value.nextCursor ? <noscript><Link href={href(base, params, { cursor: result.value.nextCursor })} className="btn btn-primary" rel="next">Next page →</Link></noscript> : <span />}
             </nav>
-            {result.value.nextCursor && <InfiniteProducts query={apiQuery} initialCursor={result.value.nextCursor} />}
+            {result.value.nextCursor && <InfiniteProducts query={apiQuery} initialCursor={result.value.nextCursor} source={source} />}
           </>
         )}
       </div>

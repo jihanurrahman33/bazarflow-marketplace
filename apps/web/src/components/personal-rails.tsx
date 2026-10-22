@@ -38,9 +38,9 @@ export function PersonalRails() {
           <Link href="/cart" className="btn btn-primary btn-sm">Go to cart</Link>
         </aside>
       )}
-      {hasHistory && (recent === null ? <RailSkeleton title="recently viewed" /> : <ProductRail title="Recently viewed" subtitle="Pick up where you left off" items={recent} />)}
+      {hasHistory && (recent === null ? <RailSkeleton title="recently viewed" /> : <ProductRail title="Recently viewed" subtitle="Pick up where you left off" items={recent} source="recently_viewed" />)}
       {hasHistory && recs !== null && recs.items.length > 0 && (
-        <ProductRail title={recs.because ? `Because you viewed ${recs.because.title.length > 38 ? `${recs.because.title.slice(0, 36)}…` : recs.because.title}` : "Picked for you"} items={recs.items} />
+        <ProductRail title={recs.because ? `Because you viewed ${recs.because.title.length > 38 ? `${recs.because.title.slice(0, 36)}…` : recs.because.title}` : "Picked for you"} items={recs.items} source="because_viewed" />
       )}
     </>
   );

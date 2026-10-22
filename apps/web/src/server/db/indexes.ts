@@ -130,6 +130,12 @@ export const INDEXES: Spec = {
     { key: { tokens: 1 }, name: "ix_knowledge_tokens" },
   ],
   [C.rateLimits]: [{ key: { expiresAt: 1 }, expireAfterSeconds: 0, name: "ttl_rate_limits" }],
+  [C.analyticsEvents]: [
+    { key: { expiresAt: 1 }, expireAfterSeconds: 0, name: "ttl_analytics_events" },
+    { key: { type: 1, at: -1 }, name: "analytics_type_at" },
+    { key: { anonId: 1, at: -1 }, name: "analytics_anon_at" },
+    { key: { orderId: 1 }, unique: true, partialFilterExpression: { type: "purchase" }, name: "uq_analytics_purchase_order" },
+  ],
 };
 
 export async function ensureIndexes(db: Db): Promise<void> {

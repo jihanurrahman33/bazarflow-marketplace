@@ -9,6 +9,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <ConsoleShell role="admin" title="Administrator" nav={[
       { href: "/admin", label: "Overview", exact: true, icon: <IconChart />, group: "Dashboard" },
+      { href: "/admin/analytics", label: "Analytics", icon: <IconChart />, group: "Dashboard" },
       { href: "/admin/orders", label: "Orders", icon: <IconReceipt />, group: "Marketplace" },
       { href: "/admin/applications", label: "Seller applications", icon: <IconStore />, group: "Marketplace" },
       { href: "/admin/vendors", label: "Sellers", icon: <IconUsers />, group: "Marketplace" },

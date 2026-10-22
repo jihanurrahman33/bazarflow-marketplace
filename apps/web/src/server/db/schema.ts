@@ -487,3 +487,20 @@ export interface RateLimitDoc {
   count: number;
   expiresAt: Date;
 }
+
+/** One anonymous behaviour event (see modules/analytics). Expires after 90 days. */
+export interface AnalyticsEventDoc {
+  _id: ObjectId;
+  anonId: string;
+  type: string;
+  at: Date;
+  expiresAt: Date;
+  userId?: ObjectId;
+  productId?: ObjectId;
+  orderId?: ObjectId;
+  query?: string;
+  results?: number;
+  source?: string;
+  experiment?: { key: string; variant: string };
+  valueMinor?: number;
+}

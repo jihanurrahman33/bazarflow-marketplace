@@ -75,14 +75,14 @@ export async function DealsRail() {
   const r = await getProducts({ sort: "newest", limit: 48 });
   if (!r.ok) return null;
   const deals = r.value.items.filter((p) => p.discountPercent).sort((a, b) => (b.discountPercent ?? 0) - (a.discountPercent ?? 0)).slice(0, 14);
-  return <div id="deals"><ProductRail title="Deals" subtitle={deals[0]?.discountPercent ? `Up to ${deals[0].discountPercent}% off` : undefined} href="/search?sort=price_asc" items={deals} /></div>;
+  return <div id="deals"><ProductRail title="Deals" subtitle={deals[0]?.discountPercent ? `Up to ${deals[0].discountPercent}% off` : undefined} href="/search?sort=price_asc" items={deals} source="deals" /></div>;
 }
 
 export async function CategoryRail({ slug }: { slug: string }) {
   const [cats, r] = await Promise.all([getCategories(), getProducts({ sort: "newest", limit: 12, category: slug })]);
   if (!r.ok) return null;
   const name = cats.ok ? cats.value.find((c) => c.slug === slug)?.name ?? slug : slug;
-  return <ProductRail title={name} href={`/category/${slug}`} items={r.value.items} />;
+  return <ProductRail title={name} href={`/category/${slug}`} items={r.value.items} source="category_row" />;
 }
 
 /** Everything after the first `skip` categories: loaded client-side as the shopper scrolls, so a long category list costs nothing up front. */
@@ -125,7 +125,7 @@ export async function NewArrivals() {
   return (
     <section id="new" aria-labelledby="new-h">
       <header className="section-head"><div><h2 id="new-h">Just in</h2></div><Link href="/search?sort=newest" className="see-all">Browse all <IconChevronRight width={16} height={16} /></Link></header>
-      <div className="grid grid-products">{r.value.items.map((p) => <ProductCard key={p.id} p={p} />)}</div>
+      <div className="grid grid-products">{r.value.items.map((p) => <ProductCard key={p.id} p={p} source="new_arrivals" />)}</div>
     </section>
   );
 }
@@ -146,11 +146,11 @@ export function SellerBanner() {
 export async function TrendingRail() {
   const r = await getTrending(12);
   if (!r.ok || r.value.length < 4) return null;
-  return <ProductRail title="Trending now" subtitle="Popular with shoppers this month" items={r.value} />;
+  return <ProductRail title="Trending now" subtitle="Popular with shoppers this month" items={r.value} source="trending" />;
 }
 
 export async function TopRatedRail() {
   const r = await getTopRated(12);
   if (!r.ok || r.value.length < 4) return null;
-  return <ProductRail title="Top rated" subtitle="Best reviewed by verified buyers" items={r.value} />;
+  return <ProductRail title="Top rated" subtitle="Best reviewed by verified buyers" items={r.value} source="top_rated" />;
 }

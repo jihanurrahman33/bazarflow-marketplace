@@ -5,7 +5,7 @@ import { IconChevronLeft, IconChevronRight } from "./icons";
 import { ProductCard, ProductCardSkeleton, type ProductCardData } from "./product-card";
 
 /** A titled, horizontally scrolling row of products (scroll-snap; arrow buttons on hover). */
-export function ProductRail({ title, subtitle, href, items }: { title: string; subtitle?: string; href?: string; items: ProductCardData[] }) {
+export function ProductRail({ title, subtitle, href, items, source }: { title: string; subtitle?: string; href?: string; items: ProductCardData[]; source?: string }) {
   const track = useRef<HTMLDivElement>(null);
   const scroll = (dir: 1 | -1) => track.current?.scrollBy({ left: dir * (track.current.clientWidth * 0.85), behavior: "smooth" });
   if (items.length === 0) return null;
@@ -18,7 +18,7 @@ export function ProductRail({ title, subtitle, href, items }: { title: string; s
       <div className="rail-wrap">
         <button type="button" className="rail-btn rail-prev" aria-label={`Scroll ${title} left`} onClick={() => scroll(-1)}><IconChevronLeft /></button>
         <div className="rail-track" ref={track} tabIndex={0} role="group" aria-label={`${title} products`}>
-          {items.map((p) => <div key={p.id} className="rail-item"><ProductCard p={p} /></div>)}
+          {items.map((p) => <div key={p.id} className="rail-item"><ProductCard p={p} source={source} /></div>)}
         </div>
         <button type="button" className="rail-btn rail-next" aria-label={`Scroll ${title} right`} onClick={() => scroll(1)}><IconChevronRight /></button>
       </div>

@@ -6,6 +6,7 @@ import { api, messageFor } from "@/lib/api";
 import { useAction } from "@/lib/hooks";
 import { formatMoney } from "@/lib/format";
 import { isColourOption, swatchFor } from "@/lib/option-presets";
+import { track } from "@/lib/track";
 import { useSession, useToast } from "./providers";
 import { Alert, Button, LinkButton } from "./ui";
 
@@ -32,6 +33,7 @@ export function ProductBuy({ productId, slug, currency, options, variants }: Pro
     const r = await api<{ itemCount: number }>("/cart/items", { method: "POST", body: { productId, variantId: variant.variantId, quantity: qty } });
     setCartCount(r.data.itemCount);
     toast("Added to cart");
+    track({ type: "add_to_cart", productId });
   });
 
   const price = variant?.priceMinor ?? Math.min(...variants.map((v) => v.priceMinor));

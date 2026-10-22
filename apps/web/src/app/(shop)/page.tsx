@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { HomeOrder } from "@/components/home-order";
 import { PersonalRails } from "@/components/personal-rails";
 import {
   CategoryRails, CategoryStrip, CategoryStripSkeleton, DealsRail, Hero, NewArrivals, NewArrivalsSkeleton, RailSkeleton,
@@ -13,8 +14,10 @@ export default function Home() {
       <ValueStrip />
       <Suspense fallback={<CategoryStripSkeleton />}><CategoryStrip /></Suspense>
       <PersonalRails />
-      <Suspense fallback={<RailSkeleton title="deals" />}><DealsRail /></Suspense>
-      <Suspense fallback={null}><TrendingRail /></Suspense>
+      <HomeOrder
+        deals={<Suspense fallback={<RailSkeleton title="deals" />}><DealsRail /></Suspense>}
+        trending={<Suspense fallback={null}><TrendingRail /></Suspense>}
+      />
       <Suspense fallback={null}><TopRatedRail /></Suspense>
       <Suspense fallback={<RailSkeleton />}><CategoryRails limit={3} /></Suspense>
       <Suspense fallback={null}><MoreCategoryRails skip={3} /></Suspense>

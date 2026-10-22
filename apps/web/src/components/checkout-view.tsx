@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { track } from "@/lib/track";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError, messageFor, newIdempotencyKey } from "@/lib/api";
@@ -20,6 +21,7 @@ export function CheckoutView() {
   const [quoteError, setQuoteError] = useState<ApiError>();
   const [stale, setStale] = useState(false);
 
+  useEffect(() => { track({ type: "begin_checkout" }); }, []);
   useEffect(() => {
     if (!addressId && addresses.data?.length) setAddressId((addresses.data.find((a) => a.isDefault) ?? addresses.data[0])!.id);
   }, [addresses.data, addressId]);

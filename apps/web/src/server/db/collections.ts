@@ -31,6 +31,7 @@ export const C = {
   reviews: "reviews",
   knowledgeDocuments: "knowledgeDocuments",
   rateLimits: "rateLimits",
+  analyticsEvents: "analyticsEvents",
 } as const;
 
 export interface Collections {
@@ -61,6 +62,7 @@ export interface Collections {
   reviews: Collection<S.ReviewDoc>;
   knowledgeDocuments: Collection<S.KnowledgeDocumentDoc>;
   rateLimits: Collection<S.RateLimitDoc>;
+  analyticsEvents: Collection<S.AnalyticsEventDoc>;
 }
 
 export function collectionsFor(db: Db): Collections {

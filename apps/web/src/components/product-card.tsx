@@ -17,9 +17,9 @@ export interface ProductCardData {
 }
 
 /** Image first, then name and price. Everything else (stock, seller, rating) appears only when it matters. */
-export function ProductCard({ p, priority }: { p: ProductCardData; priority?: boolean }) {
+export function ProductCard({ p, priority, source }: { p: ProductCardData; priority?: boolean; /** Which row or page this card sits in; added as ?ref= so views can be attributed. */ source?: string }) {
   return (
-    <Link href={`/products/${p.slug}`} className="pcard" aria-label={`${p.title}, ${formatMoneyShort(p.minPriceMinor, p.currency)}`}>
+    <Link href={`/products/${p.slug}${source ? `?ref=${source}` : ""}`} className="pcard" aria-label={`${p.title}, ${formatMoneyShort(p.minPriceMinor, p.currency)}`}>
       <div className="pcard-media">
         <SmartImage src={p.image} alt="" width={480} height={480} priority={priority} />
         {p.discountPercent ? <span className="pcard-badge" aria-label={`${p.discountPercent} percent off`}>−{p.discountPercent}%</span> : null}

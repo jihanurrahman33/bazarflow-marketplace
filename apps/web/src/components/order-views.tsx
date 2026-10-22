@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { track } from "@/lib/track";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { api, messageFor } from "@/lib/api";
@@ -42,6 +43,12 @@ export function OrderDetail({ id }: { id: string }) {
   const o = order.data;
   const p = payment.data;
   const awaiting = o?.status === "pending_payment";
+  // One purchase event per confirmed order (the server verifies the order and ignores repeats).
+  useEffect(() => {
+    if (!o || o.status === "pending_payment" || o.status === "cancelled") return;
+    try { const k = `bf.purchase.${o.id}`; if (localStorage.getItem(k)) return; localStorage.setItem(k, "1"); } catch { return; }
+    track({ type: "purchase", orderId: o.id });
+  }, [o]);
   const verifying = awaiting && (p?.status === "pending" || p?.status === "unknown" || (returned && p?.status !== "failed" && p?.status !== "cancelled"));
 
   const check = useAction(async () => {

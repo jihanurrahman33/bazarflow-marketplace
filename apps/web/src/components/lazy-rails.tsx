@@ -17,7 +17,7 @@ function LazyRail({ slug, name }: { slug: string; name: string }) {
     return () => { live = false; };
   }, [slug]);
   if (items === null) return <RailSkeleton title={name} />;
-  return <ProductRail title={name} href={`/category/${slug}`} items={items} />;
+  return <ProductRail title={name} href={`/category/${slug}`} items={items} source="category_row" />;
 }
 
 /** Category rows below the fold: a few more appear each time the shopper nears the bottom, and each loads its products only then. */
