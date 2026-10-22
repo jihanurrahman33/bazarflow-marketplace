@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import "./globals.css";
 import "./storefront.css";
 import { Providers } from "@/components/providers";
+import { WishlistProvider } from "@/components/wishlist";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { CATEGORY_BANNER, siteImage } from "@/lib/site";
@@ -40,10 +41,12 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       <body>
         <a href="#main" className="skip-link">Skip to content</a>
         <Providers>
+          <WishlistProvider>
           <Suspense fallback={null}><TopProgress /></Suspense>
           <SiteHeader categories={navCats} />
           <main id="main">{children}</main>
           <SiteFooter categories={cats.ok ? cats.value : []} />
+        </WishlistProvider>
         </Providers>
       </body>
     </html>

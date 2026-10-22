@@ -546,3 +546,12 @@ td input.mono { min-width: 190px; }
 @media (max-width: 700px) { .review-controls { grid-template-columns: 1fr; } .review-sort { justify-self: start; } }
 .did-you-mean { margin: 0; padding: 10px 14px; border-radius: 12px; background: var(--color-surface-container); color: var(--color-text-secondary); }
 .did-you-mean strong { color: var(--color-text-primary); }
+
+/* wishlist */
+.pcard-wrap { position: relative; height: 100%; }
+.wish-btn { position: absolute; top: 10px; right: 10px; z-index: 2; width: 36px; height: 36px; display: grid; place-items: center; border: 0; border-radius: 50%; background: var(--color-surface); color: var(--color-text-primary); box-shadow: var(--shadow-sm); cursor: pointer; transition: transform 0.15s, color 0.15s; }
+.wish-btn:hover { transform: scale(1.08); }
+.wish-btn[aria-pressed="true"] { color: var(--sale, #e11d48); }
+.wish-btn[aria-pressed="true"] svg { fill: currentColor; }
+.saved-item { display: flex; flex-direction: column; gap: 6px; }
+.saved-drop { margin: 0; font-size: 13px; font-weight: 600; color: var(--color-primary); }

@@ -1,4 +1,5 @@
 import { MongoServerError, ObjectId, type Filter } from "mongodb";
+import { queueWishlistAlert } from "@/server/modules/wishlist/service";
 import { getCollections } from "@/server/db/collections";
 import { withTransaction } from "@/server/db/transaction";
 import type { MediaRef, ProductDoc, ProductStatus, VariantDef } from "@/server/db/schema";
@@ -310,6 +311,10 @@ export async function updateVariant(
   );
   if (!res) throw new AppError("CONFLICT");
   if (current.status === "published") await invalidateCatalog(current.slug);
+  const before = current.variants[idx]!.priceMinor;
+  if (current.status === "published" && patch.priceMinor !== undefined && patch.priceMinor < before && res.minPriceMinor < current.minPriceMinor) {
+    await queueWishlistAlert("price_drop", id, { priceMinor: res.minPriceMinor, previousMinor: current.minPriceMinor, token: String(res.version) });
+  }
   return getVendorProduct(actor.vendorId, id);
 }
 

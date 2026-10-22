@@ -1,4 +1,5 @@
 import { ObjectId, type ClientSession } from "mongodb";
+import { queueWishlistAlert } from "@/server/modules/wishlist/service";
 import { withTransaction } from "@/server/db/transaction";
 import { getCollections } from "@/server/db/collections";
 import type { InventoryItemDoc, InventoryMovementKind } from "@/server/db/schema";
@@ -146,6 +147,10 @@ export async function adjustStock(
     throw new AppError("CONFLICT", { message: "Stock changed or is below reserved quantity. Reload and try again.", details: [{ field: "onHand", code: "BELOW_RESERVED" }] });
   }
   await movement(undefined, updated, "adjust", delta, 0, reason, { actorId: actor.userId });
+  // Back in stock: nothing was available before, something is now.
+  if (current.onHand - current.reserved <= 0 && updated.onHand - updated.reserved > 0) {
+    await queueWishlistAlert("restock", updated.productId, { token: String(updated.version) });
+  }
   return toDto(updated);
 }
 

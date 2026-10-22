@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { SmartImage } from "./smart-image";
-import { IconCart, IconChevronDown, IconChevronRight, IconClose, IconGrid, IconHome, IconMenu, IconReceipt, IconStore, IconUser } from "./icons";
+import { IconCart, IconChevronDown, IconHeart, IconChevronRight, IconClose, IconGrid, IconHome, IconMenu, IconReceipt, IconStore, IconUser } from "./icons";
 import { HeaderSearch } from "./header-search";
 import { useSession } from "./providers";
 import { Button, cx } from "./ui";
@@ -61,6 +61,7 @@ export function SiteHeader({ categories }: { categories: NavCategory[] }) {
               <>
                 {consoleHref && <Link href={consoleHref} className="action action-hide-sm"><IconStore /><span className="action-text">{user.role === "admin" ? "Admin" : "My store"}</span></Link>}
                 {user.role === "customer" && <Link href="/orders" className="action action-hide-sm"><IconReceipt /><span className="action-text">Orders</span></Link>}
+                {user.role === "customer" && <Link href="/wishlist" className="action action-hide-sm" aria-label="Saved items"><IconHeart /><span className="action-text">Saved</span></Link>}
                 <Link href="/account" className="action"><IconUser /><span className="action-text">{user.name.split(" ")[0]}</span></Link>
               </>
             ) : (
@@ -141,6 +142,7 @@ export function SiteHeader({ categories }: { categories: NavCategory[] }) {
             <h2 className="drawer-h">More</h2>
             <ul className="drawer-list">
               {user?.role === "customer" && <li><Link href="/orders">My orders</Link></li>}
+              {user?.role === "customer" && <li><Link href="/wishlist">Saved items</Link></li>}
               {shopper && <li><Link href="/become-a-seller">Sell on BazarFlow</Link></li>}
               {consoleHref && <li><Link href={consoleHref}>{user?.role === "admin" ? "Admin console" : "Seller console"}</Link></li>}
               <li><Link href="/help">Help centre</Link></li>

@@ -130,6 +130,10 @@ export const INDEXES: Spec = {
     { key: { tokens: 1 }, name: "ix_knowledge_tokens" },
   ],
   [C.rateLimits]: [{ key: { expiresAt: 1 }, expireAfterSeconds: 0, name: "ttl_rate_limits" }],
+  [C.wishlistItems]: [
+    { key: { userId: 1, productId: 1 }, unique: true, name: "uq_wishlist_user_product" },
+    { key: { productId: 1 }, name: "wishlist_product" },
+  ],
   [C.analyticsEvents]: [
     { key: { expiresAt: 1 }, expireAfterSeconds: 0, name: "ttl_analytics_events" },
     { key: { type: 1, at: -1 }, name: "analytics_type_at" },

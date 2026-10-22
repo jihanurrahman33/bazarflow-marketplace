@@ -504,3 +504,13 @@ export interface AnalyticsEventDoc {
   experiment?: { key: string; variant: string };
   valueMinor?: number;
 }
+
+/** A product a customer saved for later. */
+export interface WishlistItemDoc {
+  _id: ObjectId;
+  userId: ObjectId;
+  productId: ObjectId;
+  /** Lowest price when it was saved, so "price dropped" is a real comparison. */
+  priceMinorWhenSaved: number;
+  createdAt: Date;
+}

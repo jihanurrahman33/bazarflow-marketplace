@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { formatMoneyShort } from "@/lib/format";
 import { SmartImage } from "./smart-image";
+import { WishButton } from "./wishlist";
 
 export interface ProductCardData {
   id: string;
@@ -19,6 +20,7 @@ export interface ProductCardData {
 /** Image first, then name and price. Everything else (stock, seller, rating) appears only when it matters. */
 export function ProductCard({ p, priority, source }: { p: ProductCardData; priority?: boolean; /** Which row or page this card sits in; added as ?ref= so views can be attributed. */ source?: string }) {
   return (
+    <div className="pcard-wrap">
     <Link href={`/products/${p.slug}${source ? `?ref=${source}` : ""}`} className="pcard" aria-label={`${p.title}, ${formatMoneyShort(p.minPriceMinor, p.currency)}`}>
       <div className="pcard-media">
         <SmartImage src={p.image} alt="" width={480} height={480} priority={priority} />
@@ -40,6 +42,8 @@ export function ProductCard({ p, priority, source }: { p: ProductCardData; prior
         )}
       </div>
     </Link>
+    <WishButton productId={p.id} title={p.title} />
+    </div>
   );
 }
 
