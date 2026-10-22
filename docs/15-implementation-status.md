@@ -7,9 +7,9 @@
 | Area | Result |
 |---|---|
 | Web typecheck (TS strict) / ESLint | clean |
-| Web tests (Vitest, real MongoDB replica set) | **195 passing** in 13 files |
-| API contract | 117 operations generated from the handlers; drift-checked; every endpoint negative-tested |
-| End-to-end smoke (`scripts/smoke.ts`) | **57/57** against the production build over real HTTP |
+| Web tests (Vitest, real MongoDB replica set) | **269 passing** in 28 files |
+| API contract | 152 operations generated from the handlers; drift-checked; every endpoint negative-tested |
+| End-to-end smoke (`scripts/smoke.ts`) | **57/57** when last run (before the wishlist, coupons, Q&A, search and Bangla work); **not re-run since**: run `npm run smoke` against a production build before launch |
 | Flutter | `flutter analyze --fatal-infos` clean in all 6 projects; **124 tests** (app_core 39, design_system 15, observability 6, customer 41, seller 12, admin 11) |
 
 ## 2. Roadmap phases (docs/11)
@@ -45,6 +45,13 @@
 - **Store trust figures** (`vendors/trust.ts`) come only from real records; return rate needs 10+ completed orders and typical ship time 5+ shipped orders, otherwise they are omitted.
 - **Reviews at scale:** list endpoints support star filter, sort and stable keyset paging. Demo data is not inflated: reviews stay tied to real delivered orders, so the shop shows no review counts it did not earn.
 
+- **Background work on serverless:** `/api/internal/worker` (Bearer `CRON_SECRET`; 404 when unset) runs order expiry, payment reconciliation, refund retries and the outbox. A GitHub Actions schedule calls it every 5 minutes; `vercel.json` adds one daily cron (Vercel Hobby allows no more). `scripts/worker.ts` shares the same tick for an always-on host.
+- **First-party analytics** (`modules/analytics`): anonymous browser id in localStorage, 90-day retention, Do Not Track / Global Privacy Control honoured, purchases verified against the order. A/B experiments are stable per browser; the report refuses to name a winner under 100 shoppers per variant. First experiment: Trending before Deals.
+- **Search:** exact words, then synonyms (English and Bangla), word prefixes, then spelling correction; the page says when it corrected a query. Not a ranking engine: relevance is MongoDB text score.
+- **Wishlist alerts, coupons, Q&A, seller replies, bulk update, per-colour photos, review checks, Bangla UI, official districts** are implemented and tested. Coupons are seller-funded only (commission on the discounted amount); platform-funded promotions would need ledger work and are not built.
+- **Cash on delivery guard rails** (`checkout/risk.ts`): order cap, open-order cap, and a block after repeated returned/refused cash orders. Thresholds are env-configurable and are reasoned defaults, not tuned on data.
+- **Not built, deliberately:** shopper photo reviews (needs image moderation), sponsored listings (needs billing), delivery-time estimates (no data to estimate from), review counts beyond what real delivered orders produce.
+
 ## 4. Defects found by the test suites and fixed
 
 Recorded because they show where the risk concentrates: `undefined` stored as `null` by the driver (broke a validation); duplicate-key errors aborting MongoDB transactions (webhook dedupe and ledger postings now avoid catching them inside a transaction); body parsed before the role check on 7 vendor endpoints; Bangla words split at combining marks by the tokenizer; auth responses cast without validation (a proxy returning `200 {}` left the app on its splash screen); text controllers disposed while a dialog was still animating out; scroll-triggered "load more" retrying a failing server forever; search empty-state copy using a stale query; order-polling timers outliving the screen.
@@ -58,6 +65,8 @@ Recorded because they show where the risk concentrates: `undefined` stored as `n
 5. **Phase-6 operational work not done:** load testing, a backup/restore drill, alert thresholds wired to a real monitor, on-call procedures, app-store privacy disclosures, staged rollout. The ops endpoint (`/api/v1/admin/ops/health`) exposes the signals; nothing consumes them yet.
 6. **Single-instance assumptions:** the mock payment provider keeps its simulated gateway in process memory (sandbox only, refused in live mode). Rate limiting and idempotency are database-backed and multi-instance safe; the worker is safe to run more than once.
 7. **Content is placeholder:** help articles in `apps/web/src/lib/faq.ts` encode assumptions (7-day return window, hold period, etc.) that must match real policy; Bangla UI copy is not provided (English only; the tokenizer and formatting are Bangla-safe).
+
+8. **New in this round and still unproven:** nothing here has had a real-browser pass beyond headless Chrome screenshots of the live site, no Safari/Firefox, no screen-reader pass; the Bangla text was written by the model and needs a native reader's review; the ranking weights, COD thresholds and review-check thresholds are unvalidated defaults; analytics only sees browsers that allow tracking; the worker schedule depends on GitHub Actions running on time (it can be delayed by minutes).
 
 ## 6. Open business questions (docs/14 §4) — still open
 

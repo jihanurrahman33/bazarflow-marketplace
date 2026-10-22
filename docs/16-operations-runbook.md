@@ -87,6 +87,25 @@ Daily reconciliation (once real money flows): provider settlement report vs `pay
 
 Prepare: privacy policy and data-safety/App Privacy answers (data collected: account email/name/phone/addresses, order history, device push token, crash and usage analytics without PII), notification permission copy, signing keys, staged rollout, and a rollback plan. Test on real devices (foreground/background/terminated notification taps, token expiry, offline, step-up prompt) — this has not been done.
 
+## 10. Background worker, analytics and other new switches
+
+**Worker (needed for notifications, order expiry, payment reconciliation).** Set the same random secret in two places:
+1. Vercel environment variable `CRON_SECRET` (at least 24 characters; e.g. `openssl rand -base64 36`). Redeploy.
+2. GitHub repository secrets `CRON_SECRET` (same value) and `APP_URL` (e.g. `https://bazarflow.nishak.tech`). The `worker-tick` workflow then calls `POST /api/internal/worker` every 5 minutes. Check it under Actions; the response shows how many jobs ran. Set repository variable `WORKER_TICK_ENABLED=false` to pause it.
+`vercel.json` also schedules one run a day. On a Vercel plan that allows more, change the schedule there; on an always-on host run `npm run worker` instead.
+
+**Indexes.** After a deploy that adds collections, run `npm run db:indexes` once against production (idempotent). New in this round: analytics events (90-day expiry), wishlist, coupons and redemptions, questions.
+
+**Analytics and privacy.** Events are anonymous (random browser id, no account, name or email; purchases carry the buyer id only to verify the order) and expire after 90 days. Browsers with Do Not Track or Global Privacy Control send nothing. Add the analytics sentence to the privacy policy before launch. Staff view results at /admin/analytics.
+
+**Cash on delivery.** `COD_ENABLED` turns it on. `COD_MAX_ORDER_MINOR` (default ৳30,000), `COD_MAX_OPEN_ORDERS` (3) and `COD_BLOCK_AFTER_FAILURES` (2 returned or refused orders in 180 days) limit abuse. Raise or lower them from real experience.
+
+**Error reporting.** Set `SENTRY_DSN` to send errors to Sentry (no SDK; fields are the logger's allow-list only; at most 30 events a minute).
+
+**Moderation.** Review checks live at /admin/review-flags; hiding a review there is audited. Questions can be hidden with `POST /admin/questions/{id}/hide` (no screen yet).
+
+**Demo data.** Accounts at `example.com` and every order, review and store they created are demo data. Remove them before real shoppers arrive. `scripts/seed-bulk-*.ts` build the larger demo catalogue (the product script needs a free Pexels API key for photos).
+
 ## 9. Social sign-in (Google, Apple, Facebook via Firebase)
 
 **How it works.** The browser signs in with Firebase, gets a Firebase *ID token*, and posts it to `POST /api/v1/auth/social`. The server verifies the token itself (RS256 against Google's published keys, issuer and audience pinned to your project) and then issues BazarFlow's own session. Firebase is only the identity broker: roles, step-up, revocation and the audit log are unchanged. The mobile apps use the same endpoint with `transport: "token"`.

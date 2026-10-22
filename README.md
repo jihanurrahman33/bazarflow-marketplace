@@ -44,7 +44,7 @@ Mobile apps: `cd apps/mobile-customer && flutter run --dart-define=API_BASE_URL=
 ## Quality gates
 
 ```bash
-scripts/check-all.sh          # tokens in sync, typecheck, lint, 195 web tests, contract drift, production build,
+scripts/check-all.sh          # tokens in sync, typecheck, lint, 269 web tests, contract drift, production build,
                               # 57-check end-to-end smoke against the built server, then analyze+test of all 6 Flutter projects
 ```
 
