@@ -2,12 +2,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { IconCart, IconChevronDown, IconClose, IconGrid, IconHome, IconMenu, IconReceipt, IconStore, IconUser } from "./icons";
+import { SmartImage } from "./smart-image";
+import { IconCart, IconChevronDown, IconChevronRight, IconClose, IconGrid, IconHome, IconMenu, IconReceipt, IconStore, IconUser } from "./icons";
 import { HeaderSearch } from "./header-search";
 import { useSession } from "./providers";
 import { Button, cx } from "./ui";
 
-export interface NavCategory { id: string; name: string; slug: string; children: { id: string; name: string; slug: string }[] }
+export interface NavCategory { id: string; name: string; slug: string; image?: string; children: { id: string; name: string; slug: string }[] }
 
 export function SiteHeader({ categories }: { categories: NavCategory[] }) {
   const { user, status, signOut, cartCount } = useSession();
@@ -15,6 +16,8 @@ export function SiteHeader({ categories }: { categories: NavCategory[] }) {
   const [drawer, setDrawer] = useState(false);
   const [mega, setMega] = useState(false);
   const megaRef = useRef<HTMLDivElement>(null);
+  const [activeCat, setActiveCat] = useState(0);
+  const current = categories[activeCat] ?? categories[0];
   const isConsole = path.startsWith("/admin") || path.startsWith("/vendor");
   const consoleHref = user?.role === "admin" ? "/admin" : user?.role === "vendor" ? "/vendor" : null;
   const shopper = !user || user.role === "customer";
@@ -80,12 +83,32 @@ export function SiteHeader({ categories }: { categories: NavCategory[] }) {
               </button>
               {mega && (
                 <div id="mega-panel" className="mega-panel">
-                  {categories.length === 0 ? <p className="muted">No categories yet.</p> : categories.map((c) => (
-                    <div key={c.id} className="mega-col">
-                      <Link href={`/category/${c.slug}`} className="mega-title">{c.name}</Link>
-                      {c.children.map((ch) => <Link key={ch.id} href={`/category/${ch.slug}`}>{ch.name}</Link>)}
-                    </div>
-                  ))}
+                  {!current ? <p className="muted">No categories yet.</p> : (
+                    <>
+                      <ul className="mega-list">
+                        {categories.map((c, i) => (
+                          <li key={c.id}>
+                            <Link href={`/category/${c.slug}`} className={cx(i === activeCat && "on")} onMouseEnter={() => setActiveCat(i)} onFocus={() => setActiveCat(i)}>
+                              {c.name}<IconChevronRight width={16} height={16} />
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                      <div className="mega-detail">
+                        <Link href={`/category/${current.slug}`} className="mega-visual" tabIndex={-1} aria-hidden="true">
+                          <SmartImage src={current.image} alt="" width={640} height={400} />
+                        </Link>
+                        <div className="mega-info">
+                          <h3>{current.name}</h3>
+                          {current.children.length > 0 && <div className="mega-subs">{current.children.map((ch) => <Link key={ch.id} href={`/category/${ch.slug}`}>{ch.name}</Link>)}</div>}
+                          <div className="mega-actions">
+                            <Link href={`/category/${current.slug}`} className="btn btn-primary btn-sm">Shop {current.name}</Link>
+                            <Link href={`/category/${current.slug}?sort=newest`} className="btn btn-sm">New in</Link>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>

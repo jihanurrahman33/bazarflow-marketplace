@@ -7,6 +7,7 @@ import "./storefront.css";
 import { Providers } from "@/components/providers";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { CATEGORY_BANNER, siteImage } from "@/lib/site";
 import { TopProgress } from "@/components/top-progress";
 import { getCategories } from "@/lib/server-data";
 
@@ -33,13 +34,14 @@ export const viewport: Viewport = { width: "device-width", initialScale: 1, view
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const cats = await getCategories();
+  const navCats = cats.ok ? cats.value.map((c) => ({ ...c, image: CATEGORY_BANNER[c.slug] ? siteImage(CATEGORY_BANNER[c.slug]!, { w: 640, h: 400 }) : undefined })) : [];
   return (
     <html lang="en" className={inter.variable}>
       <body>
         <a href="#main" className="skip-link">Skip to content</a>
         <Providers>
           <Suspense fallback={null}><TopProgress /></Suspense>
-          <SiteHeader categories={cats.ok ? cats.value : []} />
+          <SiteHeader categories={navCats} />
           <main id="main">{children}</main>
           <SiteFooter categories={cats.ok ? cats.value : []} />
         </Providers>
