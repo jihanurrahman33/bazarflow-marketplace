@@ -1,0 +1,39 @@
+{
+  "name": "@bazarflow/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:indexes": "tsx scripts/ensure-indexes.ts",
+    "db:seed": "tsx scripts/seed.ts",
+    "worker": "tsx scripts/worker.ts"
+  },
+  "dependencies": {
+    "@node-rs/argon2": "^2.2.2",
+    "jose": "^6.2.13",
+    "mongodb": "^7.7.0",
+    "next": "^16.4.2",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "eslint": "^10.13.0",
+    "mongodb-memory-server": "^11.3.0",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.0",
+    "vitest": "^5.0.5"
+  }
+}

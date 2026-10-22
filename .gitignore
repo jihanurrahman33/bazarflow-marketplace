@@ -1,1 +1,12 @@
 .DS_Store
+node_modules/
+.next/
+.env
+.env.*
+!.env.example
+coverage/
+*.log
+.dart_tool/
+build/
+.flutter-plugins*
+.idea/
