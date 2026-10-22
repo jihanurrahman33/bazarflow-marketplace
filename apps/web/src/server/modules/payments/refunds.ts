@@ -312,3 +312,18 @@ export async function retryProcessingRefunds(now = new Date(), limit = 25): Prom
   }
   return n;
 }
+
+/** Refund exactly one seller order (cancellation by seller/admin, failed delivery, approved return). */
+export async function createVendorOrderRefund(
+  session: ClientSession,
+  args: { order: OrderDoc; vendorOrderId: ObjectId; amountMinor: number; reason: string; requestedBy: ObjectId; status: "requested" | "approved"; system: boolean },
+): Promise<ObjectId | null> {
+  const c = await getCollections();
+  if (args.order.paymentMethod !== "online") return null; // cash is handled manually
+  const payment = await c.payments.findOne({ orderId: args.order._id, status: { $in: ["succeeded", "partially_refunded"] } }, { session });
+  if (!payment) return null;
+  const refund = await insertRefund(session, { order: args.order, payment, vendorOrderId: args.vendorOrderId, amountMinor: args.amountMinor, reason: args.reason, requestedBy: args.requestedBy, status: args.status, postLedger: true, system: args.system });
+  await writeAudit({ actorId: args.requestedBy, action: args.status === "approved" ? "refund.auto_created" : "refund.request", resourceType: "refund", resourceId: refund._id.toHexString(), reason: args.reason }, session);
+  if (args.status === "approved") await enqueueExecution(refund._id, session);
+  return refund._id;
+}

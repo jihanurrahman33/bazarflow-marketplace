@@ -5,6 +5,7 @@ export const PERMISSIONS = [
   "catalog.moderate",
   "category.manage",
   "order.read_all",
+  "order.manage",
   "payment.reconcile",
   "refund.approve",
   "payout.approve",

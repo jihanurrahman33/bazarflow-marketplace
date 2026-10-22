@@ -44,6 +44,7 @@ export const toVendorDto = (v: VendorDoc) => ({
   status: v.status,
   commissionBps: v.commissionBps,
   shipping: v.shipping,
+  payoutDestination: v.payoutDestination ? { method: v.payoutDestination.method, accountName: v.payoutDestination.accountName, accountRef: `${"*".repeat(Math.max(0, v.payoutDestination.accountRef.length - 4))}${v.payoutDestination.accountRef.slice(-4)}` } : undefined,
   createdAt: v.createdAt.toISOString(),
 });
 
@@ -212,6 +213,7 @@ export interface VendorProfilePatch {
   name?: string;
   description?: string | null;
   logo?: { publicId: string; url: string } | null;
+  payoutDestination?: { method: "bank" | "bkash" | "nagad"; accountName: string; accountRef: string } | null;
   shipping?: { flatFeeMinor: number; freeOverMinor?: number | null };
 }
 
@@ -224,6 +226,8 @@ export async function updateVendorProfile(vendorId: ObjectId, patch: VendorProfi
   else if (patch.description !== undefined) $set.description = patch.description;
   if (patch.logo === null) $unset.logo = "";
   else if (patch.logo !== undefined) $set.logo = patch.logo;
+  if (patch.payoutDestination === null) $unset.payoutDestination = "";
+  else if (patch.payoutDestination !== undefined) $set.payoutDestination = patch.payoutDestination;
   if (patch.shipping) {
     $set["shipping.flatFeeMinor"] = patch.shipping.flatFeeMinor;
     if (patch.shipping.freeOverMinor === null) $unset["shipping.freeOverMinor"] = "";

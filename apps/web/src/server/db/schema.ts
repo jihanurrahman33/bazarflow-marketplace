@@ -77,6 +77,10 @@ export interface VendorDoc {
   commissionBps: number;
   commissionRuleVersion: number;
   shipping: { flatFeeMinor: number; freeOverMinor?: number };
+  /** Where payouts are sent. Verified out of band by finance before the first payout. */
+  payoutDestination?: { method: "bank" | "bkash" | "nagad"; accountName: string; accountRef: string };
+  /** Bumped on every payout request so concurrent requests for one vendor serialise on this document. */
+  payoutSeq?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -257,6 +261,7 @@ export interface VendorOrderDoc {
   commission: { bps: number; ruleVersion: number; amountMinor: number; vendorNetMinor: number };
   fulfillmentStatus: FulfillmentStatus;
   shipment?: { carrier: string; trackingNumber: string; shippedAt: Date };
+  deliveredAt?: Date;
   shippingAddress: AddressSnapshot;
   timeline: { status: FulfillmentStatus; at: Date; actorId?: ObjectId; note?: string }[];
   version: number;
@@ -349,17 +354,18 @@ export interface LedgerEntryDoc {
   createdAt: Date;
 }
 
-export type PayoutStatus = "requested" | "under_review" | "approved" | "processing" | "paid" | "failed" | "cancelled";
+export type PayoutStatus = "requested" | "approved" | "paid" | "failed" | "cancelled" | "rejected";
 export interface PayoutDoc {
   _id: ObjectId;
   vendorId: ObjectId;
   amountMinor: number;
   currency: CurrencyCode;
-  destinationRef: string;
+  destination: { method: string; accountName: string; accountRef: string };
   status: PayoutStatus;
   requestedBy: ObjectId;
   approvedBy?: ObjectId;
   providerRef?: string;
+  paidBy?: ObjectId;
   note?: string;
   version: number;
   createdAt: Date;

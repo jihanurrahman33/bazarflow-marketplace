@@ -28,6 +28,10 @@ const schema = z
     /** Refunds at or above this amount (minor units) need a second admin (maker-checker). 0 disables the threshold. */
     REFUND_MAKER_CHECKER_MINOR: z.coerce.number().int().min(0).default(500000),
     PAYMENT_RECONCILE_AFTER_MINUTES: z.coerce.number().int().min(1).max(1440).default(10),
+    RETURN_WINDOW_DAYS: z.coerce.number().int().min(0).max(60).default(7),
+    /** Payouts at or above this amount need a different admin to mark them paid than the one who approved. */
+    PAYOUT_MAKER_CHECKER_MINOR: z.coerce.number().int().min(0).default(1000000),
+    MIN_PAYOUT_MINOR: z.coerce.number().int().min(1).default(50000),
     PAYOUT_HOLD_DAYS: z.coerce.number().int().min(0).max(90).default(7),
     COD_ENABLED: z.enum(["true", "false"]).default("false").transform((v) => v === "true"),
   })

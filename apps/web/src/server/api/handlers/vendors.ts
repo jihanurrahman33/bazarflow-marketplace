@@ -42,6 +42,7 @@ const profilePatch = z.strictObject({
   name: z.string().trim().min(2).max(100).optional(),
   description: z.string().trim().max(1000).nullable().optional(),
   logo: z.strictObject({ publicId: cloudinaryId, url: z.url().max(500) }).nullable().optional(),
+  payoutDestination: z.strictObject({ method: z.enum(["bank", "bkash", "nagad"]), accountName: z.string().trim().min(2).max(100), accountRef: z.string().trim().min(5).max(40).regex(/^[0-9A-Za-z\- ]+$/) }).nullable().optional(),
   shipping: z.strictObject({ flatFeeMinor: z.number().int().min(0).max(10_000_000), freeOverMinor: z.number().int().min(0).max(1_000_000_000).nullable().optional() }).optional(),
 });
 
