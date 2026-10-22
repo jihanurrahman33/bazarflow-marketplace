@@ -5,7 +5,7 @@ export default defineConfig({
   resolve: { alias: { "@": path.resolve(import.meta.dirname, "src") } },
   test: {
     environment: "node",
-    include: ["tests/**/*.test.ts", "src/**/*.test.ts"],
+    include: ["tests/**/*.test.{ts,tsx}", "src/**/*.test.{ts,tsx}"],
     globalSetup: ["tests/helpers/global-setup.ts"],
     testTimeout: 30_000,
     hookTimeout: 120_000,
