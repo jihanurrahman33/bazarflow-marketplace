@@ -2,13 +2,13 @@
 
 Instructions for coding agents and developers. This file is a condensed operating guide; the full specs live in [`docs/`](docs/) and win on any conflict. Read the relevant doc before editing code, and update it in the same PR when a decision changes.
 
-> Status: the repo currently contains the specification pack only (no application code yet). The layout, commands and stack below are the **planned baseline**. Inspect the repo before assuming anything exists, and do not invent unresolved business rules — record assumptions in the task/PR.
+> Status: all roadmap phases are implemented (see [`docs/15-implementation-status.md`](docs/15-implementation-status.md) for what is verified and what is not; [`docs/16-operations-runbook.md`](docs/16-operations-runbook.md) for operations). The specs in `docs/` still win on conflict. Do not invent unresolved business rules — record assumptions in the task/PR.
 
 ## Product at a glance
 
 Independent multi-vendor marketplace (Bangladesh-first, BDT) with three account roles — **Customer, Vendor, Admin** — across six surfaces: public storefront, admin web console, vendor web console, and three separate Flutter apps (customer, vendor, admin). Details: [`docs/01-product-requirements.md`](docs/01-product-requirements.md).
 
-## Stack (baseline)
+## Stack
 
 | Area | Choice |
 |---|---|
@@ -23,7 +23,7 @@ Independent multi-vendor marketplace (Bangladesh-first, BDT) with three account 
 
 Architecture is a **modular monolith**. No microservices until measured need ([`02`](docs/02-system-architecture.md)).
 
-## Planned repository layout
+## Repository layout
 
 ```text
 apps/web/              # Next.js: storefront, admin, vendor, API
@@ -32,6 +32,26 @@ packages/contracts/    packages/design-tokens/
 mobile_packages/app_core/  design_system/  observability/
 docs/  scripts/  .github/workflows/
 ```
+
+Server code: `apps/web/src/server/{config,shared,db,modules,api}`. Handlers live in `api/handlers/*.ts` and are wrapped by `route()` (auth, CSRF, rate limit, body limit, error envelope, OpenAPI metadata); files under `src/app/api/v1/**` are generated one-line re-exports (`genroutes.mjs`).
+
+## Commands
+
+```bash
+scripts/check-all.sh                       # every gate (tokens, typecheck, lint, tests, contract, build, smoke, Flutter)
+npm test -w @bazarflow/web                 # needs a MongoDB replica set
+npm run contract -w @bazarflow/web      # regenerate packages/contracts/openapi.json after changing any route
+node packages/design-tokens/build.mjs      # regenerate CSS + Dart tokens
+(cd apps/mobile-customer && flutter analyze --fatal-infos && flutter test)   # likewise per Flutter project
+```
+
+## Lessons learned (keep these)
+
+- A duplicate-key error inside a MongoDB transaction aborts it: pre-check, upsert, or catch code 11000 outside `withTransaction`.
+- Authorize before parsing the body; every new endpoint must pass the negative-access sweep in `tests/contract.test.ts`.
+- Money-moving admin actions need step-up (`requireStepUp`) and, above thresholds, a second approver.
+- Flutter widget tests that touch Dio must use `tester.runAsync`; dispose controllers in State classes, not around dialogs; never auto-retry a failing list from a scroll listener.
+- Do not claim something works unless a test or run proved it; update docs/15 when a limit changes.
 
 Do not share TypeScript runtime logic with Dart; share contracts (OpenAPI) and keep native implementations aligned.
 

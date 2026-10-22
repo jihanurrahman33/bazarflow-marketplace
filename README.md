@@ -1,51 +1,66 @@
-# Multi-Vendor Commerce Platform — Agent Development Blueprint
+# BazarFlow
 
-**Status:** Architecture and product baseline, version 1.0  
-**Date:** 22 October 2026  
-**Target:** Web storefront + admin/vendor web consoles + three Flutter apps, backed by a versioned Next.js API and MongoDB.
+A multi-vendor marketplace: a Next.js web app and versioned REST API (storefront, seller console, admin console), three Flutter apps (customer, seller, admin), and a MongoDB data model, built phase by phase from the specification pack in [`docs/`](docs/README.md).
 
-This pack is intended to be the working source of truth for human developers and coding agents. Read it before implementation. Convert each roadmap item into a small GitHub issue with explicit acceptance criteria; implement one vertical slice at a time.
+> **Status:** all roadmap phases are implemented and verified by automated tests (details and honest limits in [`docs/15-implementation-status.md`](docs/15-implementation-status.md)). It is **not production-ready until the launch blockers in that file are closed**: payment provider approval, a real sandbox run, email/Firebase/Cloudinary credentials, and a device/browser pass.
 
-## Documents
+## What is in the repository
 
-1. [`01-product-requirements.md`](docs/01-product-requirements.md) — product boundaries, roles, MVP, user journeys and acceptance criteria.
-2. [`02-system-architecture.md`](docs/02-system-architecture.md) — architecture, modules, render strategy, design patterns and dependency rules.
-3. [`03-mongodb-domain-model.md`](docs/03-mongodb-domain-model.md) — collection design, indexes, transactions, money and inventory rules.
-4. [`04-auth-security.md`](docs/04-auth-security.md) — authentication, authorization, token lifecycle and security baseline.
-5. [`05-api-contract.md`](docs/05-api-contract.md) — API conventions, endpoint inventory and response contracts.
-6. [`06-checkout-payments.md`](docs/06-checkout-payments.md) — provider adapters, order splitting, webhooks, refunds and vendor ledgers.
-7. [`07-flutter-app-architecture.md`](docs/07-flutter-app-architecture.md) — BLoC, app separation, local persistence and app state handling.
-8. [`08-design-system-and-ux.md`](docs/08-design-system-and-ux.md) — visual system, reusable UI and loading/error/pending states.
-9. [`09-ai-and-knowledge-base.md`](docs/09-ai-and-knowledge-base.md) — secure AI support and retrieval-augmented generation (RAG).
-10. [`10-testing-and-quality-gates.md`](docs/10-testing-and-quality-gates.md) — test strategy, CI quality gates and definition of done.
-11. [`11-roadmap-and-feature-plans.md`](docs/11-roadmap-and-feature-plans.md) — dependency-ordered phases and feature-level implementation plans.
-12. [`12-agent-operating-contract.md`](docs/12-agent-operating-contract.md) — master coding-agent instructions, task template and GitHub practices.
-13. [`13-observability-and-deployment.md`](docs/13-observability-and-deployment.md) — logs, metrics, crash reports, analytics, FCM and deployment.
-14. [`14-provider-and-source-research.md`](docs/14-provider-and-source-research.md) — current official provider/platform links and assumptions to revalidate.
+```text
+apps/
+  web/                  Next.js 16 (App Router, TypeScript strict): storefront, seller + admin consoles, REST API /api/v1
+  mobile-customer/      Flutter customer app   (BLoC, go_router)
+  mobile-vendor/        Flutter seller app     (orders, stock, prices, earnings)
+  mobile-admin/         Flutter admin app      (queues, refunds, payouts; step-up auth)
+mobile_packages/
+  app_core/             API client, session (secure refresh token), cubits, deep links, push boundary
+  design_system/        Material 3 themes + accessible state widgets, generated from the shared tokens
+  observability/        analytics/Crashlytics/FCM behind redacting interfaces (no-op without Firebase)
+packages/
+  design-tokens/        tokens.json -> web CSS + Dart theme (node packages/design-tokens/build.mjs)
+  contracts/            openapi.json, generated from the route handlers and checked for drift in CI
+docs/                   specification pack (01–14) + implementation status (15) + runbook (16)
+scripts/check-all.sh    every quality gate, locally
+```
 
-## Recommended implementation baseline
+## Quick start (web + API)
 
-- **Web and API:** Next.js App Router + TypeScript strict mode. Next.js Route Handlers expose the versioned REST API to Flutter apps. Keep route handlers thin; put business logic in application/domain modules.
-- **Database:** MongoDB using the official Node.js driver, explicit indexes, validated schemas and replica-set transactions where a multi-document invariant needs them.
-- **Mobile:** Three separately shipped Flutter apps (customer, vendor, admin) using BLoC. Share internal Dart packages for design tokens, networking, authentication primitives and observability where appropriate.
-- **Media:** Cloudinary. Issue constrained signed upload parameters from the server; retain provider asset identifiers as well as delivery URLs.
-- **Reliability:** Structured logs, request IDs, idempotency keys, webhook deduplication, an outbox/worker mechanism for async side effects, and tested recovery paths.
-- **Payments:** A provider adapter boundary. Start with the first provider that grants the business a sandbox account and confirms a viable production/onboarding model. Do not assume every provider supports marketplace split settlement.
-- **AI:** Deliver a bounded, source-cited support assistant only after the core commerce, permissions, audit and observability foundations are reliable.
+Requirements: Node 22+, a MongoDB **replica set** (transactions are used; `docker run -d -p 27017:27017 mongo:8 --replSet rs0` then `rs.initiate()`), Flutter 3.4x for the mobile apps.
 
-## Non-negotiable engineering rules
+```bash
+npm install
+cp apps/web/.env.example apps/web/.env.local     # fill in the secrets (>= 32 chars each); see comments inside
+npm run db:indexes -w @bazarflow/web             # idempotent
+SEED_ADMIN_EMAIL=you@example.com SEED_ADMIN_PASSWORD='a-long-password' npm run db:seed -w @bazarflow/web
+npm run knowledge:seed -w @bazarflow/web         # optional: help-assistant content
+npm run dev                                      # http://localhost:3000
+npm run worker -w @bazarflow/web                 # outbox, payment reconciliation, order expiry, refund retries
+```
 
-1. Read the relevant docs before editing code. For every feature, write or update a short plan and acceptance criteria first.
-2. No business logic in React components, page files or raw route handlers. No direct database access from UI code.
-3. Never trust client-provided price, role, commission, inventory, payment status, vendor ownership or order totals. Recalculate and authorize on the server.
-4. Never treat a browser redirect as proof of payment. Verify via the provider's server API/webhook rules.
-5. Every mutation must have explicit authorization, input validation, state-transition checks, audit/logging expectations and tests.
-6. All visible asynchronous flows must define loading, empty, success, error, pending, cancellation and retry behaviour where those states apply.
-7. No secrets in Git, client bundles, mobile binaries, analytics events or logs. Environment variables are parsed and validated at startup.
-8. Keep web and mobile API contracts compatible, versioned and documented. Breaking API changes require a versioning/migration plan.
-9. Build a modular monolith first. Split services only when measured scaling, isolation or team-ownership requirements justify it.
-10. Do not copy competitor trademarks, private APIs, proprietary assets, listing text or distinctive UI. Use marketplace capabilities as functional references, then create independent branding and UX.
+Payments default to the **mock sandbox provider**: checkout redirects to a fake hosted page (`/mock-pay/...`) that delivers a *signed webhook* through the same code path a real provider uses. To use SSLCOMMERZ set `PAYMENT_PROVIDER=sslcommerz` plus its sandbox credentials.
 
-## Decision status
+Mobile apps: `cd apps/mobile-customer && flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000` (Android emulator). Firebase is optional until you run `flutterfire configure` (see [`docs/16`](docs/16-operations-runbook.md)).
 
-This is a proposed baseline, not evidence that merchant accounts, provider contracts, payout permissions or cloud quotas have already been approved. Treat provider eligibility, data retention/legal obligations, app-store requirements and the final domain name as launch blockers to verify with the relevant parties.
+## Quality gates
+
+```bash
+scripts/check-all.sh          # tokens in sync, typecheck, lint, 195 web tests, contract drift, production build,
+                              # 57-check end-to-end smoke against the built server, then analyze+test of all 6 Flutter projects
+```
+
+CI runs the same checks (`.github/workflows/web.yml`, `mobile.yml`). The most important suites:
+
+| Suite | What it proves |
+|---|---|
+| `tests/contract.test.ts` | every endpoint rejects guests, bad tokens, wrong roles, missing permissions and cross-origin cookie writes; contract has not drifted |
+| `tests/payments.test.ts` | duplicate / out-of-order / forged webhooks, amount mismatch, timeouts, late and duplicate payments, concurrent refunds, ledger without drift |
+| `tests/checkout.test.ts`, `catalog.test.ts` | no oversell under concurrency, idempotent checkout, multi-seller split with frozen commission |
+| `tests/support.test.ts` | retrieval benchmark, access-controlled retrieval, prompt-injection and model-misbehaviour handling |
+| `scripts/smoke.ts` | a full purchase over real HTTP against the production build |
+
+## Where to read next
+
+- [`docs/15-implementation-status.md`](docs/15-implementation-status.md) — what exists, decisions taken, known limits, launch blockers
+- [`docs/16-operations-runbook.md`](docs/16-operations-runbook.md) — environments, deployment, incident runbooks, backups
+- [`AGENTS.md`](AGENTS.md) — rules and conventions for anyone (human or agent) changing this code
+- [`docs/README.md`](docs/README.md) — index of the specification pack
