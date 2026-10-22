@@ -333,30 +333,64 @@ Future<String?> showReasonDialog(
   int minLength = 3,
   bool obscure = false,
 }) {
-  final controller = TextEditingController();
   return showDialog<String>(
     context: context,
-    builder: (ctx) => StatefulBuilder(
-      builder: (ctx, setState) {
-        final ok = !requireText || controller.text.trim().length >= minLength;
-        return AlertDialog(
-          title: Text(title),
-          content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            if (body != null) ...[Text(body), gapMd],
-            TextField(controller: controller, autofocus: true, obscureText: obscure, maxLines: obscure ? 1 : 3, minLines: 1, maxLength: obscure ? 128 : 300, decoration: InputDecoration(labelText: fieldLabel), onChanged: (_) => setState(() {})),
-          ]),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-            FilledButton(
-              onPressed: ok ? () => Navigator.pop(ctx, controller.text.trim()) : null,
-              style: danger ? FilledButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.error) : null,
-              child: Text(confirmLabel),
-            ),
-          ],
-        );
-      },
-    ),
+    builder: (_) => _ReasonDialog(title: title, body: body, fieldLabel: fieldLabel, confirmLabel: confirmLabel, danger: danger, requireText: requireText, minLength: minLength, obscure: obscure),
   );
+}
+
+/// Owns its controller so it is disposed only after the dialog has fully left the tree.
+class _ReasonDialog extends StatefulWidget {
+  const _ReasonDialog({required this.title, required this.body, required this.fieldLabel, required this.confirmLabel, required this.danger, required this.requireText, required this.minLength, required this.obscure});
+  final String title;
+  final String? body;
+  final String fieldLabel;
+  final String confirmLabel;
+  final bool danger;
+  final bool requireText;
+  final int minLength;
+  final bool obscure;
+  @override
+  State<_ReasonDialog> createState() => _ReasonDialogState();
+}
+
+class _ReasonDialogState extends State<_ReasonDialog> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ok = !widget.requireText || _controller.text.trim().length >= widget.minLength;
+    return AlertDialog(
+      title: Text(widget.title),
+      content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+        if (widget.body != null) ...[Text(widget.body!), gapMd],
+        TextField(
+          controller: _controller,
+          autofocus: true,
+          obscureText: widget.obscure,
+          maxLines: widget.obscure ? 1 : 3,
+          minLines: 1,
+          maxLength: widget.obscure ? 128 : 300,
+          decoration: InputDecoration(labelText: widget.fieldLabel),
+          onChanged: (_) => setState(() {}),
+        ),
+      ]),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        FilledButton(
+          onPressed: ok ? () => Navigator.pop(context, _controller.text.trim()) : null,
+          style: widget.danger ? FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error) : null,
+          child: Text(widget.confirmLabel),
+        ),
+      ],
+    );
+  }
 }
 
 /// Plain yes/no for irreversible actions.
