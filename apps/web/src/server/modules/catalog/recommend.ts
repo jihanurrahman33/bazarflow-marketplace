@@ -21,6 +21,7 @@ const POP_TTL_MS = 5 * 60_000;
 const BAYES_PRIOR = 3; // a product needs a few reviews before its own average outweighs the site-wide average
 const MIN_SUPPORT = 2; // "bought together" needs at least this many separate orders
 const PER_VENDOR_CAP = 3;
+const MIN_SELLERS_FOR_CAP = 3;
 const MAX_VIEWED = 20;
 const RECENCY_DECAY = 0.85;
 
@@ -67,13 +68,14 @@ async function popularity() {
 const freshness = (p: ProductDoc) => Math.exp(-(Date.now() - (p.publishedAt ?? p.createdAt).getTime()) / (30 * 86_400_000));
 const priceFit = (price: number, meanLogPrice: number) => Math.exp(-Math.abs(Math.log(Math.max(price, 1)) - meanLogPrice) / 0.9);
 
-/** Highest score first, at most PER_VENDOR_CAP per seller. */
+/** Highest score first, at most PER_VENDOR_CAP per seller, but only when there are other sellers to share the row with (a young catalogue should not be hidden by its own cap). */
 function pick(rows: ProductDoc[], score: (p: ProductDoc) => number, limit: number): ProductDoc[] {
+  const cap = new Set(rows.map((r) => r.vendorId.toHexString())).size >= MIN_SELLERS_FOR_CAP ? PER_VENDOR_CAP : Infinity;
   const perVendor = new Map<string, number>();
   const out: ProductDoc[] = [];
   for (const p of [...rows].sort((a, b) => score(b) - score(a) || b._id.getTimestamp().getTime() - a._id.getTimestamp().getTime())) {
     const v = p.vendorId.toHexString();
-    if ((perVendor.get(v) ?? 0) >= PER_VENDOR_CAP) continue;
+    if ((perVendor.get(v) ?? 0) >= cap) continue;
     perVendor.set(v, (perVendor.get(v) ?? 0) + 1);
     out.push(p);
     if (out.length >= limit) break;

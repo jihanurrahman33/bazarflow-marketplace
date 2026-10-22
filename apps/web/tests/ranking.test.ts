@@ -91,6 +91,22 @@ describe("recently viewed and ranking endpoints", () => {
   });
 });
 
+describe("row diversity", () => {
+  it("does not cut a row short just because one seller has most of the reviewed products", async () => {
+    const c = await getCollections();
+    const only = await makeVendor();
+    const cat2 = await makeCategory(admin);
+    const mine = await Promise.all(Array.from({ length: 5 }, () => makeProduct(only, { categoryId: cat2.id, publish: true, admin })));
+    for (const p of mine) await addReviews(p.id, [5, 5, 4]);
+    const top = await call(topRatedHandler, { query: { limit: 12 } });
+    const inRow = new Set(ids(top));
+    const sellerOf = async (id: string) => (await c.products.findOne({ _id: new ObjectId(id) }))!.vendorId.toHexString();
+    const fromOnly = await Promise.all(mine.map((p) => sellerOf(p.id)));
+    expect(mine.every((p) => inRow.has(p.id)), JSON.stringify([...inRow].length)).toBe(true); // all five show: the cap needs 3+ sellers in the pool
+    expect(new Set(fromOnly).size).toBe(1);
+  });
+});
+
 describe("a product with many reviews", () => {
   it("pages through every review exactly once in each sort order, and can filter by stars", async () => {
     const ratings = Array.from({ length: 57 }, (_, i) => [5, 5, 4, 5, 3, 4, 1, 2][i % 8]!);
