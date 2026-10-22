@@ -17,9 +17,13 @@ const isProtected = (e: { meta: { auth?: boolean | "optional" } }) => e.meta.aut
 
 interface Entry { path: string; method: string; handler: Handler; meta: { name: string; auth?: boolean | "optional" }; permission?: string; roles?: string[] }
 
+// api/internal holds scheduler hooks (covered by worker-tick.test.ts), not part of the public contract.
+const INTERNAL = path.join(routesDir, "internal");
+
 function walk(dir: string): string[] {
   return readdirSync(dir).flatMap((f) => {
     const p = path.join(dir, f);
+    if (p === INTERNAL) return [];
     return statSync(p).isDirectory() ? walk(p) : f === "route.ts" ? [p] : [];
   });
 }

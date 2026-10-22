@@ -10,9 +10,13 @@ import { pathToFileURL } from "node:url";
 const root = path.resolve(import.meta.dirname, "..");
 const routesDir = path.join(root, "src/app/api");
 
+/** Routes under api/internal are scheduler hooks for our own infrastructure (e.g. the worker tick), not public API. */
+const INTERNAL = path.join(routesDir, "internal");
+
 function walk(dir: string): string[] {
   return readdirSync(dir).flatMap((f) => {
     const p = path.join(dir, f);
+    if (p === INTERNAL) return [];
     return statSync(p).isDirectory() ? walk(p) : f === "route.ts" ? [p] : [];
   });
 }
