@@ -6,12 +6,18 @@ import { pageQuery } from "@/server/shared/pagination";
 import { SLUG_RE } from "@/server/shared/slug";
 import { createCategory, listCategoryTree, updateCategory } from "@/server/modules/catalog/categories";
 import { getPublicProduct, listPublicProducts } from "@/server/modules/catalog/public";
+import { OPTION_PRESETS } from "@/lib/option-presets";
 import { moderateProduct, reviewQueue } from "@/server/modules/catalog/products";
 
 const PUBLIC_CACHE = "public, s-maxage=30, stale-while-revalidate=120";
 
 export const categoriesHandler = route({ name: "categories.list", auth: false }, async () =>
   ok(await listCategoryTree(), undefined, { cache: PUBLIC_CACHE }),
+);
+
+/** Shared option library (Colour, Size, Fit...) for seller product forms on web and mobile. */
+export const optionPresetsHandler = route({ name: "option-presets.list", auth: false }, async () =>
+  ok(OPTION_PRESETS, undefined, { cache: "public, s-maxage=3600, stale-while-revalidate=86400" }),
 );
 
 const productsQuery = pageQuery.extend({

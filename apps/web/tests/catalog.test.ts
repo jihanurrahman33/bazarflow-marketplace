@@ -3,7 +3,7 @@ import { setupTestDb, teardownTestDb } from "./helpers/db";
 import { call } from "./helpers/http";
 import { makeAdmin, makeCategory, makeCustomer, makeProduct, makeVendor, media, uniq, installFakeMedia } from "./helpers/factory";
 import {
-  approveProductHandler, categoriesHandler, productDetailHandler, productsHandler, rejectProductHandler, reviewQueueHandler, vendorProductsPublicHandler,
+  approveProductHandler, categoriesHandler, optionPresetsHandler, productDetailHandler, productsHandler, rejectProductHandler, reviewQueueHandler, vendorProductsPublicHandler,
   createCategoryHandler,
 } from "@/server/api/handlers/catalog";
 import {
@@ -52,6 +52,33 @@ describe("categories", () => {
 });
 
 describe("creating products", () => {
+  it("lists a tee in several colours, sizes and fits from the shared option library", async () => {
+    const lib = await call(optionPresetsHandler, {});
+    expect(lib.status).toBe(200);
+    const names = (lib.data as { name: string }[]).map((p) => p.name);
+    expect(names).toEqual(expect.arrayContaining(["Colour", "Size", "Fit", "Shoe size", "Waist", "Material"]));
+
+    const v = await makeVendor();
+    const options = [{ name: "Colour", values: ["Black", "Navy"] }, { name: "Size", values: ["M", "L", "XL"] }, { name: "Fit", values: ["Slim", "Regular"] }];
+    const variants = options[0]!.values.flatMap((Colour) => options[1]!.values.flatMap((Size) => options[2]!.values.map((Fit) => ({
+      sku: uniq(`T-${Colour}-${Size}-${Fit}`).slice(0, 40), optionValues: { Colour, Size, Fit }, priceMinor: 99900, initialStock: 4,
+    }))));
+    expect(variants).toHaveLength(12);
+    const made = await call(createProductHandler, { method: "POST", token: v.user.token, body: body({ options, variants }) });
+    expect(made.status, JSON.stringify(made.json)).toBe(201);
+    expect(made.data.options).toEqual(options);
+    expect(made.data.variants).toHaveLength(12);
+    const c = await getCollections();
+    expect(await c.inventoryItems.countDocuments({ productId: new ObjectId(made.data.id) })).toBe(12);
+
+    // a fourth option, or a variant with a colour the product does not list, is refused
+    const four = [...options, { name: "Material", values: ["Cotton"] }];
+    expect((await call(createProductHandler, { method: "POST", token: v.user.token, body: body({ options: four, variants }) })).status).toBe(400);
+    const stray = [{ ...variants[0]!, optionValues: { ...variants[0]!.optionValues, Colour: "Red" } }, ...variants.slice(1)];
+    expect((await call(createProductHandler, { method: "POST", token: v.user.token, body: body({ options, variants: stray }) })).status).toBe(400);
+  });
+
+
   it("creates a draft with inventory and validates variant structure", async () => {
     const v = await makeVendor();
     const ok = await call(createProductHandler, { method: "POST", token: v.user.token, body: body({ options: [{ name: "Size", values: ["S", "M"] }], variants: [

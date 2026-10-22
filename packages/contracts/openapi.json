@@ -2955,6 +2955,35 @@
         }
       }
     },
+    "/api/v1/option-presets": {
+      "get": {
+        "operationId": "option-presets.list",
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "2XX": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/orders/{id}/cancel": {
       "post": {
         "operationId": "orders.cancel",

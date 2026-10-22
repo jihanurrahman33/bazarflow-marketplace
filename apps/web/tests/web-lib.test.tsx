@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { api, ApiError, messageFor, newIdempotencyKey, refreshSession } from "@/lib/api";
 import { formatDate, formatMoney, humanize, parseMoneyInput } from "@/lib/format";
 import { safeNext } from "@/lib/nav";
+import { OPTION_PRESETS, isColourOption, presetByName, sortLikePreset, swatchFor } from "@/lib/option-presets";
 import { Alert, EmptyState, ErrorPanel, Money, StatusBadge, Stars } from "@/components/ui";
 import { ProductCard } from "@/components/product-card";
 
@@ -201,5 +202,27 @@ describe("step-up retry", () => {
     setStepUpHandler(async () => false);
     expect(await api("/x", { method: "POST", body: {} }).catch((x) => x)).toMatchObject({ code: "STEP_UP_REQUIRED" });
     setStepUpHandler(null);
+  });
+});
+
+describe("option presets", () => {
+  it("are well formed: unique values, sizes within the API limits, real hex colours", () => {
+    expect(new Set(OPTION_PRESETS.map((p) => p.key)).size).toBe(OPTION_PRESETS.length);
+    expect(new Set(OPTION_PRESETS.map((p) => p.name.toLowerCase())).size).toBe(OPTION_PRESETS.length);
+    for (const p of OPTION_PRESETS) {
+      expect(p.name.length).toBeLessThanOrEqual(40);
+      expect(p.values.length).toBeLessThanOrEqual(30);
+      expect(new Set(p.values.map((v) => v.value)).size).toBe(p.values.length);
+      for (const v of p.values) { expect(v.value.length).toBeLessThanOrEqual(60); if (p.kind === "color") expect(v.hex).toMatch(/^#[0-9A-Fa-f]{6}$/); }
+    }
+  });
+  it("finds presets, swatches and ordering regardless of case", () => {
+    expect(presetByName(" colour ")?.key).toBe("colour");
+    expect(isColourOption("Frame Color")).toBe(true);
+    expect(isColourOption("Size")).toBe(false);
+    expect(swatchFor("Colour", "navy")).toBe("#1E3A5F");
+    expect(swatchFor("Colour", "Mystery")).toBeUndefined();
+    expect(swatchFor("Size", "Black")).toBeUndefined();
+    expect(sortLikePreset("Size", ["XL", "S", "Petite", "M"])).toEqual(["S", "M", "XL", "Petite"]);
   });
 });

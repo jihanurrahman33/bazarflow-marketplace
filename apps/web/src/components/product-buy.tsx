@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { api, messageFor } from "@/lib/api";
 import { useAction } from "@/lib/hooks";
 import { formatMoney } from "@/lib/format";
+import { isColourOption, swatchFor } from "@/lib/option-presets";
 import { useSession, useToast } from "./providers";
 import { Alert, Button, LinkButton } from "./ui";
 
@@ -53,12 +54,15 @@ export function ProductBuy({ productId, slug, currency, options, variants }: Pro
         <fieldset key={o.name} style={{ border: 0, padding: 0, margin: 0 }}>
           <legend className="small muted" style={{ marginBottom: 6 }}>{o.name}{chosen[o.name] ? `: ${chosen[o.name]}` : ""}</legend>
           <div className="options">
-            {o.values.map((val) => (
-              <button key={val} type="button" className="option" aria-pressed={chosen[o.name] === val} disabled={!available(o.name, val)}
-                onClick={() => { setChosen((c) => ({ ...c, [o.name]: c[o.name] === val ? "" : val })); setQty(1); }}>
-                {val}
-              </button>
-            ))}
+            {o.values.map((val) => {
+              const pick = () => { setChosen((c) => ({ ...c, [o.name]: c[o.name] === val ? "" : val })); setQty(1); };
+              const hex = swatchFor(o.name, val);
+              return isColourOption(o.name) && hex ? (
+                <button key={val} type="button" className="swatch-btn" style={{ "--swatch": hex } as React.CSSProperties} aria-label={val} title={val} aria-pressed={chosen[o.name] === val} disabled={!available(o.name, val)} onClick={pick} />
+              ) : (
+                <button key={val} type="button" className="option" aria-pressed={chosen[o.name] === val} disabled={!available(o.name, val)} onClick={pick}>{val}</button>
+              );
+            })}
           </div>
         </fieldset>
       ))}

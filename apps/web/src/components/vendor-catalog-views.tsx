@@ -1,11 +1,13 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { api, messageFor } from "@/lib/api";
 import { formatDate, parseMoneyInput } from "@/lib/format";
+import { presetByName } from "@/lib/option-presets";
 import { useAction, useApi } from "@/lib/hooks";
 import { ListTable, StatusTabs } from "./console-kit";
+import { OptionBuilder, Swatch, type OptionDraft } from "./option-builder";
 import { SmartImage } from "./smart-image";
 import { useToast } from "./providers";
 import { Alert, Button, ConfirmDialog, ErrorPanel, Field, fieldMessage, LinkButton, ListSkeleton, Money, PageHeader, StatusBadge, type Column } from "./ui";
@@ -52,29 +54,49 @@ export function ProductList() {
 const combos = (options: { name: string; values: string[] }[]): Record<string, string>[] =>
   options.reduce<Record<string, string>[]>((acc, o) => acc.flatMap((a) => o.values.map((v) => ({ ...a, [o.name]: v }))), [{}]);
 
+interface Row { sku: string; price: string; was: string; stock: string }
+const EMPTY_ROW: Row = { sku: "", price: "", was: "", stock: "0" };
+const MAX_VARIANTS = 100;
+const compact = (s: string, n: number) => s.replace(/[^A-Za-z0-9]/g, "").slice(0, n).toUpperCase();
+
 export function NewProduct() {
   const router = useRouter();
   const cats = useCategoryOptions();
   const [f, setF] = useState({ title: "", description: "", categoryId: "" });
-  const [optDraft, setOptDraft] = useState<{ name: string; values: string }[]>([]);
-  const [rows, setRows] = useState<Record<string, { sku: string; price: string; stock: string }>>({});
-  const options = optDraft.map((o) => ({ name: o.name.trim(), values: [...new Set(o.values.split(",").map((v) => v.trim()).filter(Boolean))] })).filter((o) => o.name && o.values.length);
+  const [optDraft, setOptDraft] = useState<OptionDraft[]>([]);
+  const [rows, setRows] = useState<Record<string, Row>>({});
+  const [bulk, setBulk] = useState({ price: "", was: "", stock: "" });
+  const skuSeed = useRef(Math.random().toString(36).slice(2, 5).toUpperCase());
+  const options = optDraft.map((o) => ({ name: o.name.trim(), values: [...new Set(o.values)] })).filter((o) => o.name && o.values.length);
   const combinations = useMemo(() => combos(options), [JSON.stringify(options)]); // eslint-disable-line react-hooks/exhaustive-deps
+  const tooMany = combinations.length > MAX_VARIANTS;
   const keyOf = (c: Record<string, string>) => JSON.stringify(c);
-  const row = (c: Record<string, string>) => rows[keyOf(c)] ?? { sku: "", price: "", stock: "0" };
-  const setRow = (c: Record<string, string>, patch: Partial<{ sku: string; price: string; stock: string }>) => setRows((r) => ({ ...r, [keyOf(c)]: { ...row(c), ...patch } }));
+  const row = (c: Record<string, string>): Row => rows[keyOf(c)] ?? EMPTY_ROW;
+  const setRow = (c: Record<string, string>, patch: Partial<Row>) => setRows((r) => ({ ...r, [keyOf(c)]: { ...row(c), ...patch } }));
+  // SKUs left blank are generated from the title and the chosen values, unique within this product.
+  const autoSku = (c: Record<string, string>) => [compact(f.title, 5) || "ITEM", skuSeed.current, ...Object.values(c).map((v) => compact(v, 4))].filter(Boolean).join("-").slice(0, 40);
+  const applyAll = () => setRows((r) => {
+    const next: Record<string, Row> = { ...r };
+    for (const c of combinations) next[keyOf(c)] = { ...(r[keyOf(c)] ?? EMPTY_ROW), ...(bulk.price ? { price: bulk.price } : {}), ...(bulk.was ? { was: bulk.was } : {}), ...(bulk.stock ? { stock: bulk.stock } : {}) };
+    return next;
+  });
 
   const create = useAction(async () => {
-    const variants = combinations.map((c) => {
+    const used = new Set<string>();
+    const variants = combinations.map((c, i) => {
       const r = row(c);
-      return { sku: r.sku.trim(), optionValues: c, priceMinor: parseMoneyInput(r.price) ?? -1, initialStock: Number(r.stock) };
+      let sku = r.sku.trim() || autoSku(c);
+      while (used.has(sku)) sku = `${sku.slice(0, 36)}-${i}`;
+      used.add(sku);
+      const was = parseMoneyInput(r.was);
+      return { sku, optionValues: c, priceMinor: parseMoneyInput(r.price) ?? -1, ...(was ? { compareAtMinor: was } : {}), initialStock: Number(r.stock) };
     });
     const r = await api<VProduct>("/vendor/products", { method: "POST", body: { title: f.title, description: f.description, categoryIds: [f.categoryId], options, variants } });
     router.push(`/vendor/products/${r.data.id}`);
   });
 
   return (
-    <form onSubmit={(e) => { e.preventDefault(); void create.run(); }} className="stack" noValidate>
+    <form onSubmit={(e) => { e.preventDefault(); if (!tooMany) void create.run(); }} className="stack" noValidate>
       <PageHeader title="New product" />
       {create.error && <Alert tone="danger" title="Please fix the highlighted fields">{messageFor(create.error)}</Alert>}
       <section className="card stack">
@@ -85,31 +107,35 @@ export function NewProduct() {
         </Field>
       </section>
       <section className="card stack">
-        <div className="row-between"><h2 style={{ marginBottom: 0 }}>Options</h2>{optDraft.length < 3 && <Button size="sm" onClick={() => setOptDraft([...optDraft, { name: "", values: "" }])}>+ Add option</Button>}</div>
-        <p className="muted small">Add options like Size or Colour if the product comes in variants. Separate values with commas.</p>
-        {optDraft.map((o, i) => (
-          <div key={i} className="row">
-            <input aria-label="Option name" className="input" placeholder="Size" value={o.name} onChange={(e) => setOptDraft(optDraft.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} style={{ maxWidth: 180 }} />
-            <input aria-label="Option values" className="input grow" placeholder="S, M, L" value={o.values} onChange={(e) => setOptDraft(optDraft.map((x, j) => (j === i ? { ...x, values: e.target.value } : x)))} />
-            <Button size="sm" variant="ghost" onClick={() => setOptDraft(optDraft.filter((_, j) => j !== i))}>Remove</Button>
-          </div>
-        ))}
+        <h2 style={{ marginBottom: 0 }}>Options</h2>
+        <OptionBuilder value={optDraft} onChange={setOptDraft} />
       </section>
       <section className="card stack">
-        <h2>Variants, prices and stock</h2>
+        <div className="row-between"><h2 style={{ marginBottom: 0 }}>Variants, prices and stock</h2><span className={tooMany ? "text-danger small" : "muted small"}>{combinations.length} variant{combinations.length === 1 ? "" : "s"}{tooMany ? ` · ${MAX_VARIANTS} is the most one product can have: remove some values` : ""}</span></div>
         {fieldMessage(create.error, "variants") && <Alert tone="danger">Check SKUs (must be unique), prices and option values: {fieldMessage(create.error, "variants")}</Alert>}
+        {combinations.length > 1 && (
+          <div className="bulk-bar">
+            <span className="small muted">Fill every variant:</span>
+            <input aria-label="Price for all" className="input input-sm" inputMode="decimal" placeholder="Price ৳" value={bulk.price} onChange={(e) => setBulk({ ...bulk, price: e.target.value })} />
+            <input aria-label="Was price for all" className="input input-sm" inputMode="decimal" placeholder="Was ৳ (optional)" value={bulk.was} onChange={(e) => setBulk({ ...bulk, was: e.target.value })} />
+            <input aria-label="Stock for all" className="input input-sm" inputMode="numeric" placeholder="Stock" value={bulk.stock} onChange={(e) => setBulk({ ...bulk, stock: e.target.value.replace(/\D/g, "") })} />
+            <Button size="sm" onClick={applyAll}>Apply to all</Button>
+          </div>
+        )}
         <div className="table-wrap"><table>
-          <thead><tr><th>Variant</th><th>SKU</th><th className="num">Price (৳)</th><th className="num">Stock</th></tr></thead>
+          <thead><tr><th>Variant</th><th>SKU</th><th className="num">Price (৳)</th><th className="num">Was (৳)</th><th className="num">Stock</th></tr></thead>
           <tbody>{combinations.map((c) => (
             <tr key={keyOf(c)}>
-              <td>{Object.values(c).join(" / ") || "Default"}</td>
-              <td><input aria-label="SKU" className="input mono" value={row(c).sku} onChange={(e) => setRow(c, { sku: e.target.value })} placeholder="TSHIRT-RED-M" /></td>
+              <td><span className="variant-cell">{Object.entries(c).map(([k, v]) => <span key={k} className="variant-part"><Swatch option={k} value={v} />{v}</span>)}{Object.keys(c).length === 0 && "Default"}</span></td>
+              <td><input aria-label="SKU" className="input mono" value={row(c).sku} onChange={(e) => setRow(c, { sku: e.target.value })} placeholder={autoSku(c)} /></td>
               <td><input aria-label="Price" className="input" inputMode="decimal" value={row(c).price} onChange={(e) => setRow(c, { price: e.target.value })} placeholder="1200.00" /></td>
+              <td><input aria-label="Was price" className="input" inputMode="decimal" value={row(c).was} onChange={(e) => setRow(c, { was: e.target.value })} placeholder="optional" /></td>
               <td><input aria-label="Stock" className="input" inputMode="numeric" value={row(c).stock} onChange={(e) => setRow(c, { stock: e.target.value.replace(/\D/g, "") })} /></td>
             </tr>))}</tbody>
         </table></div>
+        <p className="muted small">Leave SKU blank and we generate one. "Was" is the old price: when it is higher than the price, shoppers see the discount.</p>
       </section>
-      <div className="row"><Button type="submit" variant="primary" loading={create.pending}>Create draft</Button><span className="muted small">You can add photos and submit for review next.</span></div>
+      <div className="row"><Button type="submit" variant="primary" loading={create.pending} disabled={tooMany}>Create draft</Button><span className="muted small">You can add photos and submit for review next.</span></div>
     </form>
   );
 }
@@ -272,7 +298,7 @@ function AddVariant({ open, product, onClose, onDone }: { open: boolean; product
   return (
     <ConfirmDialog open={open} title="Add a variant" confirmLabel="Add variant" pending={add.pending} onClose={onClose} onConfirm={() => void add.run()}>
       {add.error && <Alert tone="danger">{messageFor(add.error)}</Alert>}
-      {product.options.map((o) => <Field key={o.name} label={o.name} hint={`Existing: ${o.values.join(", ")}`}>{(p) => <input {...p} className="input" value={vals[o.name] ?? ""} onChange={(e) => setVals({ ...vals, [o.name]: e.target.value })} />}</Field>)}
+      {product.options.map((o) => <Field key={o.name} label={o.name} hint={`Existing: ${o.values.join(", ")}. Pick a suggestion or type a new value.`}>{(p) => <><input {...p} className="input" list={`dl-${o.name}`} value={vals[o.name] ?? ""} onChange={(e) => setVals({ ...vals, [o.name]: e.target.value })} /><datalist id={`dl-${o.name}`}>{[...new Set([...o.values, ...(presetByName(o.name)?.values.map((x) => x.value) ?? [])])].map((v) => <option key={v} value={v} />)}</datalist></>}</Field>)}
       <Field label="SKU" error={fieldMessage(add.error, "variants")}>{(p) => <input {...p} className="input mono" value={f.sku} onChange={(e) => setF({ ...f, sku: e.target.value })} />}</Field>
       <div className="form-grid"><Field label="Price (৳)">{(p) => <input {...p} className="input" inputMode="decimal" value={f.price} onChange={(e) => setF({ ...f, price: e.target.value })} />}</Field><Field label="Initial stock">{(p) => <input {...p} className="input" inputMode="numeric" value={f.stock} onChange={(e) => setF({ ...f, stock: e.target.value.replace(/\D/g, "") })} />}</Field></div>
     </ConfirmDialog>
