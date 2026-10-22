@@ -44,7 +44,7 @@ export function HeroCarousel({ slides }: { slides: Slide[] }) {
               <span className="hero-eyebrow">{s.eyebrow}</span>
               <h2>{s.title}</h2>
               <p>{s.text}</p>
-              <Link href={s.href} className="btn btn-hero" tabIndex={i === index ? 0 : -1}>{s.cta}</Link>
+              <Link href={s.href} className="btn btn-hero" tabIndex={i === index ? 0 : -1}>{s.cta} →</Link>
             </div>
           </article>
         ))}
@@ -53,8 +53,23 @@ export function HeroCarousel({ slides }: { slides: Slide[] }) {
         <>
           <button type="button" className="hero-arrow hero-prev" aria-label="Previous slide" onClick={() => go(index - 1)}><IconChevronLeft /></button>
           <button type="button" className="hero-arrow hero-next" aria-label="Next slide" onClick={() => go(index + 1)}><IconChevronRight /></button>
-          <div className="hero-dots" role="tablist" aria-label="Choose slide">
-            {slides.map((s, i) => <button key={s.id} type="button" role="tab" aria-selected={i === index} aria-label={`Slide ${i + 1}`} onClick={() => go(i)} />)}
+          <div className="hero-indicators">
+            <div className="hero-counter" aria-hidden="true">
+              <span>0{index + 1}</span> / 0{slides.length}
+            </div>
+            <div className="hero-dots" role="tablist" aria-label="Choose slide">
+              {slides.map((s, i) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  role="tab"
+                  className={i === index ? "active" : ""}
+                  aria-selected={i === index}
+                  aria-label={`Slide ${i + 1}`}
+                  onClick={() => go(i)}
+                />
+              ))}
+            </div>
           </div>
         </>
       )}
