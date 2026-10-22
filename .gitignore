@@ -10,3 +10,5 @@ coverage/
 build/
 .flutter-plugins*
 .idea/
+*.tsbuildinfo
+next-env.d.ts
