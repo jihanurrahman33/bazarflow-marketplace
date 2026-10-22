@@ -43,7 +43,7 @@ console.log((await ensureCustomer(customerEmail, need("NEW_CUSTOMER_PASSWORD"), 
 const vendorEmail = need("NEW_VENDOR_EMAIL");
 const vendorPassword = need("NEW_VENDOR_PASSWORD");
 await ensureCustomer(vendorEmail, vendorPassword, "Demo Seller");
-let vendorUser = await c.users.findOne({ emailNormalized: vendorEmail.toLowerCase() });
+const vendorUser = await c.users.findOne({ emailNormalized: vendorEmail.toLowerCase() });
 if (vendorUser?.role === "customer") {
   const adminActor = await authenticateAccessToken((await login({ email: need("SEED_ADMIN_EMAIL"), password: need("SEED_ADMIN_PASSWORD"), device })).tokens.accessToken);
   const seller = await authenticateAccessToken((await login({ email: vendorEmail, password: vendorPassword, device })).tokens.accessToken);
@@ -52,7 +52,6 @@ if (vendorUser?.role === "customer") {
     documents: [],
   });
   await approveApplication(adminActor, new ObjectId(app.id));
-  vendorUser = await c.users.findOne({ emailNormalized: vendorEmail.toLowerCase() });
   console.log(`seller created and approved: ${vendorEmail}`);
 } else console.log(`seller exists: ${vendorEmail} (${vendorUser?.role})`);
 

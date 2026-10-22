@@ -59,7 +59,15 @@ export const refreshHandler = route(
     const token = b.refreshToken ?? fromCookie;
     if (!token) throw new AppError("REFRESH_TOKEN_INVALID");
     const mode = b.refreshToken ? (b.transport ?? "token") : "cookie";
-    if (mode === "cookie" && ctx.req.headers.get("origin") !== new URL(getEnv().APP_ORIGIN).origin) throw new AppError("ORIGIN_NOT_ALLOWED");
+    if (mode === "cookie") {
+      const origin = ctx.req.headers.get("origin");
+      const configured = new URL(getEnv().APP_ORIGIN).origin;
+      const host = ctx.req.headers.get("x-forwarded-host") ?? ctx.req.headers.get("host");
+      const proto = ctx.req.headers.get("x-forwarded-proto") ?? "https";
+      if (!origin || (origin !== configured && (!host || origin !== `${proto}://${host}`))) {
+        throw new AppError("ORIGIN_NOT_ALLOWED");
+      }
+    }
     const tokens = await refresh(token, b.device);
     if (mode === "cookie") return { status: 200, data: { expiresIn: tokens.expiresIn }, cookies: authCookies(tokens) };
     return ok({ accessToken: tokens.accessToken, refreshToken: tokens.refreshToken, expiresIn: tokens.expiresIn, tokenType: "Bearer" });

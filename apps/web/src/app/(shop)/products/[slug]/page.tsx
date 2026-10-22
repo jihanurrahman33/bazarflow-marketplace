@@ -6,9 +6,9 @@ import { ProductBuy } from "@/components/product-buy";
 import { Suspense } from "react";
 import { IconReturn, IconShield, IconStore, IconTruck } from "@/components/icons";
 import { ProductRail, RailSkeleton } from "@/components/product-rail";
+import { ProductReviews } from "@/components/product-reviews";
 import { Stars } from "@/components/ui";
 import { getProduct, getProducts, getReviews } from "@/lib/server-data";
-import { formatDate } from "@/lib/format";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -78,18 +78,12 @@ export default async function ProductPage({ params }: Props) {
       </div>
       <section aria-labelledby="desc" className="card"><h2 id="desc">Product details</h2><p style={{ whiteSpace: "pre-line", marginBottom: 0 }}>{v.description}</p></section>
       <Suspense fallback={<RailSkeleton />}><MoreFrom vendor={v.vendor?.slug} category={v.categories[0]?.slug} exclude={v.id} /></Suspense>
-      <section aria-labelledby="reviews" className="stack">
-        <h2 id="reviews">Customer reviews</h2>
-        {!reviews.ok ? <p className="muted">Reviews are unavailable right now.</p>
-          : reviews.value.items.length === 0 ? <p className="muted">No reviews yet. Only customers who received this product can review it.</p>
-          : reviews.value.items.map((r) => (
-            <article key={r.id} className="card">
-              <div className="row-between"><span><Stars value={r.rating} /> {r.title && <strong>{r.title}</strong>}</span><span className="muted small">{formatDate(r.createdAt, { dateStyle: "medium" })}</span></div>
-              <p style={{ whiteSpace: "pre-line", marginBottom: 4 }}>{r.body}</p>
-              <span className="muted small">{r.author} · Verified purchase</span>
-            </article>
-          ))}
-      </section>
+      <ProductReviews
+        productSlug={v.slug}
+        productTitle={v.title}
+        initialReviews={reviews.ok ? reviews.value.items : []}
+        initialSummary={reviews.ok ? reviews.value.summary : { count: 0, average: null }}
+      />
     </div>
   );
 }

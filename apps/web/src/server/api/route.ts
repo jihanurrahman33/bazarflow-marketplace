@@ -97,7 +97,13 @@ export const clearCookie = (name: string, path = "/"): string => setCookie(name,
 
 function assertSameOrigin(req: Request): void {
   const origin = req.headers.get("origin");
-  if (!origin || origin !== new URL(getEnv().APP_ORIGIN).origin) throw new AppError("ORIGIN_NOT_ALLOWED");
+  if (!origin) throw new AppError("ORIGIN_NOT_ALLOWED");
+  const configured = new URL(getEnv().APP_ORIGIN).origin;
+  if (origin === configured) return;
+  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
+  const proto = req.headers.get("x-forwarded-proto") ?? "https";
+  if (host && origin === `${proto}://${host}`) return;
+  throw new AppError("ORIGIN_NOT_ALLOWED");
 }
 
 async function authenticate(req: Request): Promise<{ actor: Actor; cookieAuth: boolean }> {

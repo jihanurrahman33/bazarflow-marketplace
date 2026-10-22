@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { getEnv } from "@/server/config/env";
+import { getCollections } from "@/server/db/collections";
 import { ok, page, route, created } from "@/server/api/route";
 import { AppError } from "@/server/shared/errors";
 import { parseObjectId } from "@/server/shared/ids";
@@ -39,8 +40,21 @@ export const refreshPaymentHandler = route<{ id: string }>(
 
 /** Browser lands here after the hosted page. It only forwards the shopper to the order page; it changes no state. */
 export const paymentReturnHandler = route<{ provider: string }>({ name: "payments.return", auth: false }, async (ctx) => {
-  const q = ctx.query(z.object({ order: objectIdStr, result: z.enum(["success", "fail", "cancel"]).optional() }));
-  return { status: 303, redirectTo: `${getEnv().APP_ORIGIN}/orders/${q.order}?payment=returned` };
+  let orderId = ctx.query(z.object({ order: objectIdStr.optional(), result: z.enum(["success", "fail", "cancel"]).optional() })).order;
+  if (!orderId) {
+    const raw = await ctx.rawBody().catch(() => "");
+    const params = new URLSearchParams(raw);
+    const tranId = params.get("tran_id");
+    if (tranId) {
+      const c = await getCollections();
+      const p = await c.payments.findOne({ merchantReference: tranId }, { projection: { orderId: 1 } });
+      if (p) orderId = p.orderId.toHexString();
+    }
+  }
+  if (!orderId) {
+    return { status: 303, redirectTo: `${getEnv().APP_ORIGIN}/orders` };
+  }
+  return { status: 303, redirectTo: `${getEnv().APP_ORIGIN}/orders/${orderId}?payment=returned` };
 });
 
 // ----- provider webhook -----

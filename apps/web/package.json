@@ -16,7 +16,11 @@
     "worker": "tsx scripts/worker.ts",
     "contract": "tsx scripts/gen-openapi.ts",
     "smoke": "tsx scripts/smoke.ts",
-    "knowledge:seed": "tsx scripts/seed-knowledge.ts"
+    "knowledge:seed": "tsx scripts/seed-knowledge.ts",
+    "seed:accounts": "tsx scripts/seed-accounts.ts",
+    "seed:demo": "tsx scripts/seed-demo.ts",
+    "seed:vendor-products": "tsx scripts/seed-vendor-products.ts",
+    "seed:reviews": "tsx scripts/seed-reviews.ts"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.2.2",

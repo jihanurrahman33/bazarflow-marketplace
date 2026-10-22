@@ -28,7 +28,10 @@ export async function GET(_req: Request, ctx: { params: Promise<{ ref: string }>
 export async function POST(req: Request, ctx: { params: Promise<{ ref: string }> }) {
   if (!enabled()) return notFound();
   const origin = req.headers.get("origin");
-  if (origin !== new URL(getEnv().APP_ORIGIN).origin) return new Response("Forbidden", { status: 403 });
+  const configured = new URL(getEnv().APP_ORIGIN).origin;
+  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
+  const proto = req.headers.get("x-forwarded-proto") ?? "https";
+  if (!origin || (origin !== configured && (!host || origin !== `${proto}://${host}`))) return new Response("Forbidden", { status: 403 });
   const { ref } = await ctx.params;
   const { outcome } = (await req.json().catch(() => ({}))) as { outcome?: string };
   const status: ProviderPaymentStatus | undefined = outcome === "success" ? "succeeded" : outcome === "fail" ? "failed" : outcome === "cancel" ? "cancelled" : undefined;
