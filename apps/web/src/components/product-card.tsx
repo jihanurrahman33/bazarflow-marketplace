@@ -10,6 +10,7 @@ export interface ProductCardData {
   minPriceMinor: number;
   compareAtMinor?: number;
   discountPercent?: number;
+  rating?: { average: number; count: number };
   currency: string;
   inStock: boolean;
   vendor: { slug?: string; name?: string };
@@ -29,6 +30,12 @@ export function ProductCard({ p, priority }: { p: ProductCardData; priority?: bo
           <span className="now">{formatMoneyShort(p.minPriceMinor, p.currency)}</span>
           {p.compareAtMinor ? <s className="was">{formatMoneyShort(p.compareAtMinor, p.currency)}</s> : null}
         </div>
+        {p.rating && (
+          <span className="pcard-rating" role="img" aria-label={`Rated ${p.rating.average} out of 5 from ${p.rating.count} reviews`}>
+            <span className="stars" aria-hidden="true">{"★".repeat(Math.round(p.rating.average))}{"☆".repeat(5 - Math.round(p.rating.average))}</span>
+            <span aria-hidden="true">{p.rating.average} ({p.rating.count})</span>
+          </span>
+        )}
         {p.vendor.name && <span className="pcard-store">{p.vendor.name}</span>}
       </div>
     </Link>

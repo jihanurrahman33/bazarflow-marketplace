@@ -105,9 +105,17 @@ export async function listPublicProducts(q: ListProductsQuery) {
     availabilityByVariant(rows.map((r) => r._id)),
   ]);
   const vmap = new Map(vendors.map((v) => [v._id.toHexString(), v]));
+  // One grouped query for the whole page: average rating and review count per product (published reviews only).
+  const ratingRows = rows.length
+    ? await c.reviews.aggregate<{ _id: ObjectId; n: number; avg: number }>([
+        { $match: { productId: { $in: rows.map((r) => r._id) }, status: "published" } },
+        { $group: { _id: "$productId", n: { $sum: 1 }, avg: { $avg: "$rating" } } },
+      ]).toArray()
+    : [];
+  const ratings = new Map(ratingRows.map((r) => [r._id.toHexString(), { average: Math.round(r.avg * 10) / 10, count: r.n }]));
   return {
     items: rows.map((p) => ({
-      id: p._id.toHexString(), slug: p.slug, title: p.title, image: cardImage(p), minPriceMinor: p.minPriceMinor, currency: p.currency, ...discountOf(p),
+      id: p._id.toHexString(), slug: p.slug, title: p.title, image: cardImage(p), minPriceMinor: p.minPriceMinor, currency: p.currency, ...discountOf(p), ...(ratings.has(p._id.toHexString()) ? { rating: ratings.get(p._id.toHexString()) } : {}),
       inStock: p.variants.some((v) => v.active && (avail.get(`${p._id.toHexString()}:${v.variantId}`) ?? 0) > 0),
       vendor: { slug: vmap.get(p.vendorId.toHexString())?.slug, name: vmap.get(p.vendorId.toHexString())?.name },
     })),
