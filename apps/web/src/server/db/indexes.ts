@@ -130,6 +130,14 @@ export const INDEXES: Spec = {
     { key: { tokens: 1 }, name: "ix_knowledge_tokens" },
   ],
   [C.rateLimits]: [{ key: { expiresAt: 1 }, expireAfterSeconds: 0, name: "ttl_rate_limits" }],
+  [C.coupons]: [
+    { key: { code: 1 }, unique: true, name: "uq_coupons_code" },
+    { key: { vendorId: 1, _id: -1 }, name: "coupons_vendor" },
+  ],
+  [C.couponRedemptions]: [
+    { key: { couponId: 1, userId: 1, released: 1 }, name: "coupon_redemptions_user" },
+    { key: { orderId: 1 }, unique: true, name: "uq_coupon_redemption_order" },
+  ],
   [C.wishlistItems]: [
     { key: { userId: 1, productId: 1 }, unique: true, name: "uq_wishlist_user_product" },
     { key: { productId: 1 }, name: "wishlist_product" },

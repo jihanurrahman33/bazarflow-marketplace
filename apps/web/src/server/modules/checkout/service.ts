@@ -13,6 +13,7 @@ import { reserveLines, settleReservation } from "@/server/modules/inventory/serv
 import { toOrderDto } from "@/server/modules/orders/dto";
 import { getPaymentAdapter } from "@/server/modules/payments/registry";
 import { buildQuote, toQuoteDto, type Quote } from "./quote";
+import { redeemCoupon } from "@/server/modules/coupons/service";
 
 export interface CheckoutInput {
   addressId: ObjectId;
@@ -31,7 +32,7 @@ export async function quoteCheckout(actor: Actor, input: { addressId: ObjectId }
   const c = await getCollections();
   const address = await getOwnedAddress(actor.userId, input.addressId);
   const cart = await c.carts.findOne({ userId: actor.userId });
-  const quote = await buildQuote(cart?.lines ?? [], address.district);
+  const quote = await buildQuote(cart?.lines ?? [], address.district, { couponCode: cart?.couponCode, userId: actor.userId });
   return { ...toQuoteDto(quote), paymentMethods: ["online", ...(getEnv().COD_ENABLED ? ["cod"] : [])] };
 }
 
@@ -54,7 +55,7 @@ export async function placeOrder(actor: Actor, input: CheckoutInput) {
   const c = await getCollections();
   const address = await getOwnedAddress(actor.userId, input.addressId);
   const cart = await c.carts.findOne({ userId: actor.userId });
-  const quote = await buildQuote(cart?.lines ?? [], address.district);
+  const quote = await buildQuote(cart?.lines ?? [], address.district, { couponCode: cart?.couponCode, userId: actor.userId });
   assertQuoteOrderable(quote);
   if (input.paymentMethod === "online") {
     const caps = getPaymentAdapter().capabilities();
@@ -78,7 +79,8 @@ export async function placeOrder(actor: Actor, input: CheckoutInput) {
     const orderId = newId();
     const orderNumber = publicOrderNumber();
     const vendorOrders: VendorOrderDoc[] = quote.groups.map((g) => {
-      const commissionMinor = percentBps(money(g.subtotalMinor), g.vendor.commissionBps).amountMinor;
+      // Commission is on what the shopper pays for the items: a seller-funded discount lowers the seller's commission too.
+      const commissionMinor = percentBps(money(g.subtotalMinor - g.discountMinor), g.vendor.commissionBps).amountMinor;
       const status = cod ? "new" : "awaiting_payment";
       return {
         _id: newId(), parentOrderId: orderId, publicOrderNumber: orderNumber, vendorId: new ObjectId(g.vendorId), buyerId: actor.userId,
@@ -87,7 +89,7 @@ export async function placeOrder(actor: Actor, input: CheckoutInput) {
           productId: new ObjectId(l.productId), productSlug: l.productSlug, variantId: l.variantId, sku: l.sku, title: l.title, variantLabel: l.variantLabel,
           imageUrl: l.imageUrl, unitPriceMinor: l.unitPriceMinor, quantity: l.quantity, lineTotalMinor: l.lineTotalMinor,
         })),
-        totals: { subtotalMinor: g.subtotalMinor, shippingMinor: g.shippingMinor, totalMinor: g.totalMinor },
+        totals: { subtotalMinor: g.subtotalMinor, shippingMinor: g.shippingMinor, ...(g.discountMinor ? { discountMinor: g.discountMinor } : {}), totalMinor: g.totalMinor },
         // Commission applies to the item subtotal only; the vendor keeps shipping. Rate + rule version are frozen here.
         commission: { bps: g.vendor.commissionBps, ruleVersion: g.vendor.commissionRuleVersion, amountMinor: commissionMinor, vendorNetMinor: g.totalMinor - commissionMinor },
         fulfillmentStatus: status, shippingAddress: snapshot, timeline: [{ status, at: now }], version: 1, createdAt: now, updatedAt: now,
@@ -97,11 +99,13 @@ export async function placeOrder(actor: Actor, input: CheckoutInput) {
       _id: orderId, publicOrderNumber: orderNumber, buyerId: actor.userId, currency: quote.currency, totals: quote.totals,
       vendorOrderIds: vendorOrders.map((v) => v._id), paymentMethod: input.paymentMethod,
       paymentStatus: cod ? "cod_pending" : "pending", status: cod ? "confirmed" : "pending_payment",
+      ...(quote.coupon ? { couponCode: quote.coupon.code } : {}),
       shippingAddress: snapshot, version: 1, createdAt: now, updatedAt: now,
     };
 
     try {
       await withTransaction(async (session) => {
+        if (quote.coupon) await redeemCoupon(session, quote.coupon, actor.userId, orderId);
         await c.orders.insertOne(order, { session });
         await c.vendorOrders.insertMany(vendorOrders, { session });
         const reserveInput = quote.groups.flatMap((g) => g.lines.map((l) => ({ inventoryItemId: l.inventoryItemId, quantity: l.quantity })));
@@ -112,7 +116,7 @@ export async function placeOrder(actor: Actor, input: CheckoutInput) {
         );
         if (cod) await settleReservation(session, orderId, "commit");
         // Only the ordered lines leave the cart.
-        await c.carts.updateOne({ userId: actor.userId }, { $set: { lines: [], updatedAt: now } }, { session });
+        await c.carts.updateOne({ userId: actor.userId }, { $set: { lines: [], updatedAt: now }, $unset: { couponCode: "" } }, { session });
         if (cod) await enqueueOrderConfirmed(order, vendorOrders, session);
       });
       return toOrderDto(order, vendorOrders);

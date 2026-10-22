@@ -106,6 +106,7 @@ export function CheckoutView() {
             ))}
             {quote.issues.length > 0 && <Alert tone="warning">Some items are unavailable. <Link href="/cart">Review your cart</Link></Alert>}
             <dl className="kv">
+              {quote.totals.discountMinor > 0 && <><dt>Discount{quote.coupon ? ` (${quote.coupon.code})` : ""}</dt><dd className="right discount-amt">−<Money minor={quote.totals.discountMinor} /></dd></>}
               <dt><strong>Total</strong></dt><dd className="right"><strong><Money minor={quote.totals.totalMinor} /></strong></dd>
             </dl>
           </>

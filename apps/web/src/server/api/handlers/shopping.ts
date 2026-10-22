@@ -4,7 +4,7 @@ import { requireRole } from "@/server/modules/authorization/actor";
 import { parseObjectId } from "@/server/shared/ids";
 import { pageQuery } from "@/server/shared/pagination";
 import { createAddress, deleteAddress, listAddresses, updateAddress } from "@/server/modules/addresses/service";
-import { addItem, getCart, MAX_QTY_PER_LINE, removeItem, setQuantity } from "@/server/modules/cart/service";
+import { addItem, applyCouponToCart, getCart, removeCouponFromCart, MAX_QTY_PER_LINE, removeItem, setQuantity } from "@/server/modules/cart/service";
 import { toQuoteDto } from "@/server/modules/checkout/quote";
 import { placeOrder, quoteCheckout } from "@/server/modules/checkout/service";
 import { requireIdempotencyKey, withIdempotency } from "@/server/modules/idempotency/idempotency";
@@ -55,6 +55,17 @@ export const patchCartItemHandler = route<{ itemId: string }>({ name: "cart.patc
 export const deleteCartItemHandler = route<{ itemId: string }>({ name: "cart.delete" }, async (ctx) => {
   requireRole(ctx.actor, "customer");
   return ok(toQuoteDto(await removeItem(ctx.actor.userId, ctx.params.itemId)));
+});
+
+export const applyCouponHandler = route({ name: "cart.coupon.apply", rateLimit: { rule: { name: "cart.coupon", limit: 30, windowSeconds: 600 }, by: "actor" } }, async (ctx) => {
+  requireRole(ctx.actor, "customer");
+  const b = await ctx.body(z.strictObject({ code: z.string().trim().min(3).max(20) }));
+  return ok(toQuoteDto(await applyCouponToCart(ctx.actor.userId, b.code)));
+});
+
+export const removeCouponHandler = route({ name: "cart.coupon.remove" }, async (ctx) => {
+  requireRole(ctx.actor, "customer");
+  return ok(toQuoteDto(await removeCouponFromCart(ctx.actor.userId)));
 });
 
 // ----- checkout -----

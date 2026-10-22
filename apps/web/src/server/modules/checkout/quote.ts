@@ -6,6 +6,7 @@ import { getShippingStrategy } from "@/server/modules/shipping/strategy";
 import { availableOf } from "@/server/modules/inventory/service";
 import { variantLabel } from "@/server/modules/catalog/products";
 import { getMediaProvider } from "@/server/modules/media/cloudinary";
+import { checkCoupon, ISSUE_MESSAGE, type AppliedCoupon, type CouponIssueReason } from "@/server/modules/coupons/service";
 
 export type QuoteIssueCode = "PRODUCT_UNAVAILABLE" | "VARIANT_UNAVAILABLE" | "INSUFFICIENT_STOCK" | "VENDOR_INACTIVE";
 
@@ -38,6 +39,10 @@ export interface QuoteVendorGroup {
   lines: QuoteLine[];
   subtotalMinor: number;
   shippingMinor: number;
+  /** Seller-funded coupon discount on this seller's items. Zero when no coupon applies here. */
+  discountMinor: number;
+  /** The seller's shipping rule, so the cart can show how far a shopper is from free shipping. */
+  shippingPolicy: { flatFeeMinor: number; freeOverMinor: number | null };
   totalMinor: number;
 }
 
@@ -45,6 +50,9 @@ export interface Quote {
   currency: CurrencyCode;
   groups: QuoteVendorGroup[];
   issues: QuoteIssue[];
+  /** The coupon in effect, or why the shopper's code does not apply (the cart still works without it). */
+  coupon?: AppliedCoupon;
+  couponIssue?: { code: string; reason: CouponIssueReason; message: string };
   totals: { subtotalMinor: number; shippingMinor: number; discountMinor: number; totalMinor: number };
   itemCount: number;
 }
@@ -63,7 +71,7 @@ function imageFor(p: ProductDoc): string | undefined {
  * Single source of truth for prices, availability and shipping. Used by the cart view, the quote endpoint and
  * checkout, so what the shopper sees is exactly what gets charged. Client-supplied prices never enter here.
  */
-export async function buildQuote(lines: CartDoc["lines"], district: string | undefined): Promise<Quote> {
+export async function buildQuote(lines: CartDoc["lines"], district: string | undefined, opts: { couponCode?: string; userId?: ObjectId } = {}): Promise<Quote> {
   const c = await getCollections();
   const issues: QuoteIssue[] = [];
   const productIds = [...new Set(lines.map((l) => l.productId.toHexString()))];
@@ -104,7 +112,8 @@ export async function buildQuote(lines: CartDoc["lines"], district: string | und
     const group = groups.get(vendor._id.toHexString()) ?? {
       vendorId: vendor._id.toHexString(),
       vendor: { name: vendor.name, slug: vendor.slug, commissionBps: vendor.commissionBps, commissionRuleVersion: vendor.commissionRuleVersion },
-      lines: [], subtotalMinor: 0, shippingMinor: 0, totalMinor: 0,
+      lines: [], subtotalMinor: 0, shippingMinor: 0, discountMinor: 0, totalMinor: 0,
+      shippingPolicy: { flatFeeMinor: vendor.shipping.flatFeeMinor, freeOverMinor: vendor.shipping.freeOverMinor ?? null },
     };
     const lineTotal = variant.priceMinor * l.quantity;
     group.lines.push({
@@ -117,20 +126,34 @@ export async function buildQuote(lines: CartDoc["lines"], district: string | und
     groups.set(group.vendorId, group);
   }
 
+  let coupon: AppliedCoupon | undefined;
+  let couponIssue: Quote["couponIssue"];
+  if (opts.couponCode && groups.size > 0) {
+    const check = await checkCoupon(opts.couponCode, opts.userId, [...groups.values()].map((g) => ({ vendorId: g.vendorId, subtotalMinor: g.subtotalMinor })));
+    if (check.ok) coupon = check.coupon;
+    else couponIssue = { code: opts.couponCode, reason: check.reason, message: ISSUE_MESSAGE[check.reason] };
+  }
+
   const strategy = getShippingStrategy();
   let subtotal = 0;
   let shipping = 0;
+  let discount = 0;
   for (const g of groups.values()) {
+    // Shipping is judged on the list subtotal, so a coupon never takes away a shopper's free shipping.
     g.shippingMinor = strategy.quote({ vendor: vmap.get(g.vendorId)!, subtotalMinor: g.subtotalMinor, district: district ?? "" });
-    g.totalMinor = g.subtotalMinor + g.shippingMinor;
+    g.discountMinor = coupon && coupon.vendorId === g.vendorId ? coupon.discountMinor : 0;
+    g.totalMinor = g.subtotalMinor - g.discountMinor + g.shippingMinor;
     subtotal += g.subtotalMinor;
     shipping += g.shippingMinor;
+    discount += g.discountMinor;
   }
   return {
     currency: DEFAULT_CURRENCY,
     groups: [...groups.values()],
     issues,
-    totals: { subtotalMinor: subtotal, shippingMinor: shipping, discountMinor: 0, totalMinor: subtotal + shipping },
+    ...(coupon ? { coupon } : {}),
+    ...(couponIssue ? { couponIssue } : {}),
+    totals: { subtotalMinor: subtotal, shippingMinor: shipping, discountMinor: discount, totalMinor: subtotal - discount + shipping },
     itemCount,
   };
 }
@@ -145,6 +168,7 @@ export function toQuoteDto(q: Quote) {
       lines: g.lines.map(({ inventoryItemId: _drop, ...l }) => l),
     })),
     issues: q.issues,
+    coupon: q.coupon, couponIssue: q.couponIssue,
     totals: q.totals,
     itemCount: q.itemCount,
   };

@@ -1,4 +1,5 @@
 import { ObjectId, type ClientSession } from "mongodb";
+import { releaseCouponForOrder } from "@/server/modules/coupons/service";
 import { getCollections } from "@/server/db/collections";
 import { withTransaction } from "@/server/db/transaction";
 import type { OrderDoc } from "@/server/db/schema";
@@ -58,6 +59,7 @@ export async function cancelUnpaidOrder(session: ClientSession, orderId: ObjectI
     { session },
   );
   await settleReservation(session, orderId, "release");
+  await releaseCouponForOrder(session, orderId);
   await enqueue(
     {
       type: "notify.user", aggregateType: "order", aggregateId: orderId.toHexString(), dedupeKey: `order-cancelled:${orderId.toHexString()}`,
@@ -123,6 +125,7 @@ export async function cancelConfirmedOrder(session: ClientSession, order: OrderD
       if (inv) await restock(session, inv._id, item.quantity, "order cancelled", order._id);
     }
   }
+  await releaseCouponForOrder(session, order._id);
   await enqueue(
     {
       type: "notify.user", aggregateType: "order", aggregateId: order._id.toHexString(), dedupeKey: `order-cancelled:${order._id.toHexString()}`,

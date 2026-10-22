@@ -555,3 +555,12 @@ td input.mono { min-width: 190px; }
 .wish-btn[aria-pressed="true"] svg { fill: currentColor; }
 .saved-item { display: flex; flex-direction: column; gap: 6px; }
 .saved-drop { margin: 0; font-size: 13px; font-weight: 600; color: var(--color-primary); }
+
+/* coupons and free-shipping progress */
+.ship-bar p, .ship-note { margin: 0 0 6px; font-size: 13px; color: var(--color-text-secondary); }
+.ship-note-done { color: var(--color-primary); font-weight: 600; margin: 0; }
+.ship-track { display: block; height: 6px; border-radius: 99px; background: var(--color-surface-container); overflow: hidden; }
+.ship-track i { display: block; height: 100%; background: var(--color-primary); border-radius: 99px; transition: width 0.3s ease; }
+.coupon-box { display: grid; gap: 6px; padding: 12px 0; border-block: 1px solid var(--color-border); }
+.coupon-msg { margin: 0; font-size: 13px; color: var(--color-danger, #dc2626); }
+.discount-amt { color: var(--color-primary); font-weight: 600; }

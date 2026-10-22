@@ -7,7 +7,6 @@ export interface Experiment { key: string; description: string; variants: [contr
 
 export const EXPERIMENTS: Experiment[] = [
   { key: "home_order", description: "Homepage: show Trending before Deals", variants: ["control", "trending_first"] },
-  { key: "cart_ship_bar", description: "Cart: show the free-shipping progress bar", variants: ["control", "show"] },
 ];
 
 const hash = (s: string) => { let h = 2166136261; for (const ch of s) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };

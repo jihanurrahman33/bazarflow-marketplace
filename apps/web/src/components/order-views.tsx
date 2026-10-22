@@ -113,6 +113,7 @@ export function OrderDetail({ id }: { id: string }) {
             <h2>Summary</h2>
             <dl className="kv">
               <dt>Items</dt><dd className="right"><Money minor={o.totals.subtotalMinor} currency={o.currency} /></dd>
+              {o.totals.discountMinor > 0 && <><dt>Discount</dt><dd className="right discount-amt">−<Money minor={o.totals.discountMinor} currency={o.currency} /></dd></>}
               <dt>Shipping</dt><dd className="right"><Money minor={o.totals.shippingMinor} currency={o.currency} /></dd>
               <dt><strong>Total</strong></dt><dd className="right"><strong><Money minor={o.totals.totalMinor} currency={o.currency} /></strong></dd>
               <dt>Payment</dt><dd className="right">{o.paymentMethod === "cod" ? "Cash on delivery" : "Online"}</dd>

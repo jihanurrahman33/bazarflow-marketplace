@@ -12,6 +12,7 @@ export default function VendorLayout({ children }: { children: ReactNode }) {
       { href: "/vendor/orders", label: "Orders", icon: <IconReceipt />, group: "Sell" },
       { href: "/vendor/products", label: "Products", icon: <IconTag />, group: "Catalogue" },
       { href: "/vendor/inventory", label: "Inventory", icon: <IconBox />, group: "Catalogue" },
+      { href: "/vendor/coupons", label: "Coupons", icon: <IconTag />, group: "Catalogue" },
       { href: "/vendor/payouts", label: "Earnings & payouts", icon: <IconCoin />, group: "Money" },
       { href: "/vendor/settings", label: "Store settings", icon: <IconSettings />, group: "Store" },
     ]}>{children}</ConsoleShell>

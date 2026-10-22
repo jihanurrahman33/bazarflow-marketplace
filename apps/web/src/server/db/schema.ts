@@ -180,6 +180,8 @@ export interface StockReservationDoc {
 export interface CartDoc {
   _id: ObjectId;
   userId: ObjectId;
+  /** Coupon code the shopper applied; re-checked on every read and at checkout. */
+  couponCode?: string;
   lines: { productId: ObjectId; variantId: string; quantity: number; addedAt: Date }[];
   updatedAt: Date;
 }
@@ -228,6 +230,8 @@ export interface OrderDoc {
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentSummaryStatus;
   status: OrderStatus;
+  /** Coupon applied to this order (the discount is already inside totals). */
+  couponCode?: string;
   shippingAddress: AddressSnapshot;
   reservationId?: ObjectId;
   cancellationReason?: string;
@@ -263,7 +267,7 @@ export interface VendorOrderDoc {
   vendorSlug: string;
   currency: CurrencyCode;
   items: OrderItemSnapshot[];
-  totals: { subtotalMinor: number; shippingMinor: number; totalMinor: number };
+  totals: { subtotalMinor: number; shippingMinor: number; discountMinor?: number; totalMinor: number };
   commission: { bps: number; ruleVersion: number; amountMinor: number; vendorNetMinor: number };
   fulfillmentStatus: FulfillmentStatus;
   shipment?: { carrier: string; trackingNumber: string; shippedAt: Date };
@@ -512,5 +516,36 @@ export interface WishlistItemDoc {
   productId: ObjectId;
   /** Lowest price when it was saved, so "price dropped" is a real comparison. */
   priceMinorWhenSaved: number;
+  createdAt: Date;
+}
+
+/** A seller-funded discount code (see modules/coupons). */
+export interface CouponDoc {
+  _id: ObjectId;
+  vendorId: ObjectId;
+  /** Upper-case, unique across the marketplace. */
+  code: string;
+  kind: "percent" | "fixed";
+  /** Percent (1-90) or an amount in minor units. */
+  value: number;
+  minSubtotalMinor?: number;
+  maxDiscountMinor?: number;
+  startsAt?: Date;
+  expiresAt?: Date;
+  maxRedemptions?: number;
+  perUserLimit: number;
+  usedCount: number;
+  active: boolean;
+  createdAt: Date;
+}
+
+export interface CouponRedemptionDoc {
+  _id: ObjectId;
+  couponId: ObjectId;
+  userId: ObjectId;
+  orderId: ObjectId;
+  discountMinor: number;
+  /** True once the order was cancelled and the use was given back. */
+  released: boolean;
   createdAt: Date;
 }

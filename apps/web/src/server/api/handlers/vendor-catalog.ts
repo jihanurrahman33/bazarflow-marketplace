@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { createCoupon, listCoupons, updateCoupon } from "@/server/modules/coupons/service";
 import { created, ok, page, route, type Ctx } from "@/server/api/route";
 import { requireVendor } from "@/server/modules/authorization/actor";
 import { parseObjectId } from "@/server/shared/ids";
@@ -97,3 +98,30 @@ export const adjustInventoryHandler = route<{ skuId: string }>({ name: "vendor.i
 export const movementsHandler = route<{ skuId: string }>({ name: "vendor.inventory.movements" }, async (ctx) =>
   ok(await listMovements(vendorOf(ctx).vendorId, parseObjectId(ctx.params.skuId))),
 );
+
+// ----- coupons (seller-funded) -----
+const couponBody = z.strictObject({
+  code: z.string().trim().min(3).max(20),
+  kind: z.enum(["percent", "fixed"]),
+  value: z.number().int().min(1).max(100_000_000),
+  minSubtotalMinor: z.number().int().min(1).max(100_000_000).optional(),
+  maxDiscountMinor: z.number().int().min(1).max(100_000_000).optional(),
+  startsAt: z.iso.datetime().optional(),
+  expiresAt: z.iso.datetime().optional(),
+  maxRedemptions: z.number().int().min(1).max(1_000_000).optional(),
+  perUserLimit: z.number().int().min(1).max(10).default(1),
+});
+
+export const listCouponsHandler = route({ name: "vendor.coupons.list" }, async (ctx) => ok(await listCoupons(vendorOf(ctx).vendorId)));
+
+export const createCouponHandler = route({ name: "vendor.coupons.create", rateLimit: { rule: { name: "vendor.coupons.create", limit: 30, windowSeconds: 3600 }, by: "actor" } }, async (ctx) => {
+  const v = vendorOf(ctx);
+  const b = await ctx.body(couponBody);
+  return created(await createCoupon(v.vendorId, { ...b, startsAt: b.startsAt ? new Date(b.startsAt) : undefined, expiresAt: b.expiresAt ? new Date(b.expiresAt) : undefined }));
+});
+
+export const patchCouponHandler = route<{ id: string }>({ name: "vendor.coupons.patch" }, async (ctx) => {
+  const v = vendorOf(ctx);
+  const b = await ctx.body(z.strictObject({ active: z.boolean().optional(), expiresAt: z.iso.datetime().nullable().optional(), maxRedemptions: z.number().int().min(1).max(1_000_000).nullable().optional() }));
+  return ok(await updateCoupon(v.vendorId, parseObjectId(ctx.params.id), { active: b.active, expiresAt: b.expiresAt === null ? null : b.expiresAt ? new Date(b.expiresAt) : undefined, maxRedemptions: b.maxRedemptions }));
+});

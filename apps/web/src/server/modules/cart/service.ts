@@ -4,6 +4,7 @@ import type { CartDoc } from "@/server/db/schema";
 import { AppError } from "@/server/shared/errors";
 import { newId } from "@/server/shared/ids";
 import { buildQuote, type Quote } from "@/server/modules/checkout/quote";
+import { ISSUE_MESSAGE, normaliseCode } from "@/server/modules/coupons/service";
 
 export const MAX_QTY_PER_LINE = 20;
 export const MAX_CART_LINES = 50;
@@ -31,7 +32,24 @@ async function getOrCreate(userId: ObjectId): Promise<CartDoc> {
 /** The cart returns advisory prices only: every read recomputes them from the live catalogue. */
 export async function getCart(userId: ObjectId): Promise<Quote> {
   const cart = await getOrCreate(userId);
-  return buildQuote(cart.lines, undefined);
+  return buildQuote(cart.lines, undefined, { couponCode: cart.couponCode, userId });
+}
+
+/** Attach a coupon to the cart. A code that does not apply is rejected with the reason; the cart is left as it was. */
+export async function applyCouponToCart(userId: ObjectId, rawCode: string) {
+  const cart = await getOrCreate(userId);
+  const code = normaliseCode(rawCode);
+  const quote = await buildQuote(cart.lines, undefined, { couponCode: code, userId });
+  if (!quote.coupon) throw new AppError("VALIDATION_FAILED", { message: quote.couponIssue?.message ?? ISSUE_MESSAGE.not_found, details: [{ field: "code", code: (quote.couponIssue?.reason ?? "not_found").toUpperCase() }] });
+  const c = await getCollections();
+  await c.carts.updateOne({ userId }, { $set: { couponCode: code, updatedAt: new Date() } });
+  return quote;
+}
+
+export async function removeCouponFromCart(userId: ObjectId) {
+  const c = await getCollections();
+  await c.carts.updateOne({ userId }, { $unset: { couponCode: "" }, $set: { updatedAt: new Date() } });
+  return getCart(userId);
 }
 
 export async function addItem(userId: ObjectId, input: { productId: ObjectId; variantId: string; quantity: number }) {
@@ -73,5 +91,5 @@ export async function removeItem(userId: ObjectId, id: string) {
 
 export async function clearCart(userId: ObjectId) {
   const c = await getCollections();
-  await c.carts.updateOne({ userId }, { $set: { lines: [], updatedAt: new Date() } });
+  await c.carts.updateOne({ userId }, { $set: { lines: [], updatedAt: new Date() }, $unset: { couponCode: "" } });
 }
