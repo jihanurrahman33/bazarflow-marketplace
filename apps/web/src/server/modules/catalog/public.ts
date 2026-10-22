@@ -140,10 +140,10 @@ export async function getPublicProduct(slug: string) {
     availabilityByVariant([p._id]),
     c.categories.find({ _id: { $in: p.categoryIds } }).toArray(),
   ]);
-  let media = p.media.map((m) => ({ url: m.url, width: m.width, height: m.height }));
+  let media = p.media.map((m) => ({ url: m.url, width: m.width, height: m.height, forOption: m.forOption }));
   try {
     const provider = getMediaProvider();
-    media = p.media.map((m) => ({ url: provider.deliveryUrl(m.publicId, "gallery"), width: m.width, height: m.height }));
+    media = p.media.map((m) => ({ url: provider.deliveryUrl(m.publicId, "gallery"), width: m.width, height: m.height, forOption: m.forOption }));
   } catch {
     /* keep stored URLs */
   }

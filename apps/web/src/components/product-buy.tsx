@@ -7,6 +7,7 @@ import { useAction } from "@/lib/hooks";
 import { formatMoney } from "@/lib/format";
 import { isColourOption, swatchFor } from "@/lib/option-presets";
 import { track } from "@/lib/track";
+import { useSelection } from "./product-selection";
 import { useSession, useToast } from "./providers";
 import { Alert, Button, LinkButton } from "./ui";
 
@@ -17,7 +18,11 @@ export function ProductBuy({ productId, slug, currency, options, variants }: Pro
   const { user, status, setCartCount } = useSession();
   const { toast } = useToast();
   const path = usePathname();
-  const [chosen, setChosen] = useState<Record<string, string>>(() => (options.length === 0 ? {} : Object.fromEntries(options.map((o) => [o.name, ""]))));
+  const selection = useSelection();
+  const [localChosen, setLocalChosen] = useState<Record<string, string>>(() => (options.length === 0 ? {} : Object.fromEntries(options.map((o) => [o.name, ""]))));
+  // Shared with the gallery when the page provides a selection; otherwise this component keeps its own.
+  const chosen = selection ? selection.chosen : localChosen;
+  const pickValue = (name: string, value: string) => { if (selection) selection.choose(name, value); else setLocalChosen((c) => ({ ...c, [name]: value })); };
   const [qty, setQty] = useState(1);
 
   const variant = useMemo(
@@ -57,7 +62,7 @@ export function ProductBuy({ productId, slug, currency, options, variants }: Pro
           <legend className="small muted" style={{ marginBottom: 6 }}>{o.name}{chosen[o.name] ? `: ${chosen[o.name]}` : ""}</legend>
           <div className="options">
             {o.values.map((val) => {
-              const pick = () => { setChosen((c) => ({ ...c, [o.name]: c[o.name] === val ? "" : val })); setQty(1); };
+              const pick = () => { pickValue(o.name, chosen[o.name] === val ? "" : val); setQty(1); };
               const hex = swatchFor(o.name, val);
               return isColourOption(o.name) && hex ? (
                 <button key={val} type="button" className="swatch-btn" style={{ "--swatch": hex } as React.CSSProperties} aria-label={val} title={val} aria-pressed={chosen[o.name] === val} disabled={!available(o.name, val)} onClick={pick} />

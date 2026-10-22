@@ -51,6 +51,34 @@ describe("categories", () => {
   });
 });
 
+describe("photos tied to an option", () => {
+  it("lets a seller tie a photo to a colour, refuses unknown values, and exposes the tag to shoppers", async () => {
+    const v = await makeVendor();
+    const made = await call(createProductHandler, { method: "POST", token: v.user.token, body: body({ options: [{ name: "Colour", values: ["Black", "White"] }], variants: [
+      { sku: "PH-B-" + uniq(), optionValues: { Colour: "Black" }, priceMinor: 100000, initialStock: 3 },
+      { sku: "PH-W-" + uniq(), optionValues: { Colour: "White" }, priceMinor: 100000, initialStock: 3 },
+    ] }) });
+    expect(made.status).toBe(201);
+    const id = made.data.id as string;
+    const asset = (n: string) => { const publicId = `${vendorMediaFolder(v.vendorId.toHexString())}/${uniq(n)}`; media.assets.add(publicId); return publicId; };
+    const black = asset("black"), white = asset("white"), any = asset("any");
+    const patch = (m: object[]) => call(patchProductHandler, { method: "PATCH", token: v.user.token, params: { id }, body: { media: m } });
+
+    expect((await patch([{ publicId: black, forOption: { name: "Colour", value: "Red" } }])).error?.details[0]?.field).toBe("media.0.forOption"); // not a colour this product has
+    expect((await patch([{ publicId: black, forOption: { name: "Size", value: "M" } }])).status).toBe(400);
+    const ok = await patch([{ publicId: any }, { publicId: black, forOption: { name: "Colour", value: "Black" } }, { publicId: white, forOption: { name: "Colour", value: "White" } }]);
+    expect(ok.status, JSON.stringify(ok.json)).toBe(200);
+    expect(ok.data.media.map((m: { forOption?: unknown }) => m.forOption ?? null)).toEqual([null, { name: "Colour", value: "Black" }, { name: "Colour", value: "White" }]);
+
+    await call(submitReviewHandler, { method: "POST", token: v.user.token, params: { id } });
+    await call(approveProductHandler, { method: "POST", token: admin.token, params: { id } });
+    const slug = (await call(getProductHandler, { token: v.user.token, params: { id } })).data.slug as string;
+    const pub = await call(productDetailHandler, { params: { slug } });
+    expect(pub.status).toBe(200);
+    expect(pub.data.media.map((m: { forOption?: unknown }) => m.forOption ?? null)).toEqual([null, { name: "Colour", value: "Black" }, { name: "Colour", value: "White" }]);
+  });
+});
+
 describe("creating products", () => {
   it("lists a tee in several colours, sizes and fits from the shared option library", async () => {
     const lib = await call(optionPresetsHandler, {});

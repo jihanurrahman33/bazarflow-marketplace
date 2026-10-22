@@ -1,10 +1,18 @@
 "use client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useSelection } from "./product-selection";
 import { SmartImage } from "./smart-image";
 
 /** Product gallery: thumbnails, and a hover-zoom on mouse devices (touch users just see the full image). */
-export function Gallery({ media, title }: { media: { url: string; width?: number; height?: number }[]; title: string }) {
+export function Gallery({ media, title }: { media: { url: string; width?: number; height?: number; forOption?: { name: string; value: string } }[]; title: string }) {
   const [i, setI] = useState(0);
+  const last = useSelection()?.last;
+  // Picking an option value (say Colour: Black) shows the first photo the seller tied to it.
+  useEffect(() => {
+    if (!last) return;
+    const idx = media.findIndex((m) => m.forOption?.name === last.name && m.forOption.value === last.value);
+    if (idx >= 0) setI(idx);
+  }, [last, media]);
   const zoom = useRef<HTMLDivElement>(null);
   if (media.length === 0) return <div className="gallery"><div className="main"><SmartImage alt="No image available" width={1080} height={1080} /></div></div>;
   const current = media[Math.min(i, media.length - 1)]!;

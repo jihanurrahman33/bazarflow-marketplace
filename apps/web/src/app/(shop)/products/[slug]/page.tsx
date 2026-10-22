@@ -7,6 +7,7 @@ import { Suspense } from "react";
 import { IconReturn, IconShield, IconTruck } from "@/components/icons";
 import { ProductRail, RailSkeleton } from "@/components/product-rail";
 import { ProductReviews } from "@/components/product-reviews";
+import { ProductSelection } from "@/components/product-selection";
 import { TrackView } from "@/components/track-view";
 import { Stars } from "@/components/ui";
 import { getProduct, getProducts, getRelated, getReviews } from "@/lib/server-data";
@@ -52,6 +53,7 @@ export default async function ProductPage({ params }: Props) {
       <nav className="breadcrumbs" aria-label="Breadcrumb">
         <Link href="/">Home</Link>{v.categories[0] && <> / <Link href={`/category/${v.categories[0].slug}`}>{v.categories[0].name}</Link></>} / {v.title}
       </nav>
+      <ProductSelection>
       <div className="pdp">
         <div className="pdp-gallery"><Gallery media={v.media} title={v.title} /></div>
         <div className="pdp-info stack">
@@ -71,6 +73,7 @@ export default async function ProductPage({ params }: Props) {
           <section aria-labelledby="desc" className="pdp-desc"><h2 id="desc">About this item</h2><p style={{ whiteSpace: "pre-line" }}>{v.description}</p></section>
         </div>
       </div>
+      </ProductSelection>
       <Suspense fallback={<RailSkeleton />}><MoreFrom id={v.id} vendor={v.vendor?.slug} category={v.categories[0]?.slug} /></Suspense>
       <ProductReviews
         productSlug={v.slug}

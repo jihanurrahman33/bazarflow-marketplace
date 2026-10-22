@@ -188,7 +188,7 @@ export interface UpdateProductInput {
   title?: string;
   description?: string;
   categoryIds?: ObjectId[];
-  media?: { publicId: string }[];
+  media?: { publicId: string; forOption?: { name: string; value: string } }[];
 }
 
 /** Fields that change what shoppers see; editing them on a published product sends it back through moderation. */
@@ -207,7 +207,7 @@ export async function updateProduct(actor: { userId: ObjectId; vendorId: ObjectI
     await assertCategories(input.categoryIds);
     $set.categoryIds = input.categoryIds;
   }
-  if (input.media !== undefined) $set.media = await bindMedia(vendor._id, input.media);
+  if (input.media !== undefined) $set.media = await bindMedia(vendor._id, input.media, current.options);
 
   const touchesContent = CONTENT_FIELDS.some((f) => input[f] !== undefined);
   let nextStatus: ProductStatus = current.status;
@@ -231,7 +231,7 @@ export async function updateProduct(actor: { userId: ObjectId; vendorId: ObjectI
  * Bind uploaded assets to the product: the public id must sit under this vendor's folder (so one vendor can
  * never attach another's assets), exist at the provider, and delivery URLs are built centrally.
  */
-async function bindMedia(vendorId: ObjectId, refs: { publicId: string }[]): Promise<MediaRef[]> {
+async function bindMedia(vendorId: ObjectId, refs: { publicId: string; forOption?: { name: string; value: string } }[], options: { name: string; values: string[] }[]): Promise<MediaRef[]> {
   if (refs.length > MAX_MEDIA) throw new AppError("VALIDATION_FAILED", { details: [{ field: "media", code: "TOO_MANY" }] });
   const prefix = `${vendorMediaFolder(vendorId.toHexString())}/`;
   const provider = getMediaProvider();
@@ -244,7 +244,11 @@ async function bindMedia(vendorId: ObjectId, refs: { publicId: string }[]): Prom
     seen.add(ref.publicId);
     const asset = await provider.verifyAsset(ref.publicId);
     if (!asset) throw new AppError("VALIDATION_FAILED", { details: [{ field: `media.${position}.publicId`, code: "ASSET_NOT_FOUND" }] });
-    out.push({ publicId: ref.publicId, url: provider.deliveryUrl(ref.publicId, "gallery"), width: asset.width, height: asset.height, position });
+    // A photo can only be tied to an option value the product actually has.
+    if (ref.forOption && !options.some((o) => o.name === ref.forOption!.name && o.values.includes(ref.forOption!.value))) {
+      throw new AppError("VALIDATION_FAILED", { details: [{ field: `media.${position}.forOption`, code: "UNKNOWN_OPTION" }] });
+    }
+    out.push({ publicId: ref.publicId, url: provider.deliveryUrl(ref.publicId, "gallery"), width: asset.width, height: asset.height, position, ...(ref.forOption ? { forOption: ref.forOption } : {}) });
   }
   return out;
 }

@@ -19,7 +19,10 @@ const optionValues = z.record(z.string().min(1).max(40), z.string().min(1).max(6
 const variantInput = z.strictObject({
   sku, optionValues: optionValues.default({}), priceMinor: price, compareAtMinor: price.optional(), initialStock: z.number().int().min(0).max(1_000_000).default(0),
 });
-const mediaInput = z.array(z.strictObject({ publicId: z.string().min(1).max(250).regex(/^[A-Za-z0-9_\-/]+$/) })).max(10);
+const mediaInput = z.array(z.strictObject({
+  publicId: z.string().min(1).max(250).regex(/^[A-Za-z0-9_\-/]+$/),
+  forOption: z.strictObject({ name: z.string().trim().min(1).max(40), value: z.string().trim().min(1).max(60) }).optional(),
+})).max(10);
 
 const createBody = z.strictObject({
   title: z.string().trim().min(3).max(150),

@@ -115,6 +115,8 @@ export interface MediaRef {
   width?: number;
   height?: number;
   position: number;
+  /** When set, this photo shows one option value (e.g. Colour: Black); the product page jumps to it when a shopper picks that value. */
+  forOption?: { name: string; value: string };
 }
 export interface ProductDoc {
   _id: ObjectId;

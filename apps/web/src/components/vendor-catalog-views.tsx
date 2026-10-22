@@ -16,7 +16,7 @@ interface CategoryNode { id: string; name: string; slug: string; children: { id:
 interface PVariant { variantId: string; sku: string; optionValues: Record<string, string>; priceMinor: number; compareAtMinor?: number; active: boolean; stock?: { onHand: number; reserved: number; inventoryItemId: string } }
 interface VProduct {
   id: string; slug: string; title: string; description: string; status: string; categoryIds: string[]; options: { name: string; values: string[] }[]; currency: string;
-  variants: PVariant[]; media: { publicId: string; url: string }[]; minPriceMinor: number; moderation?: { reason?: string }; updatedAt: string;
+  variants: PVariant[]; media: { publicId: string; url: string; forOption?: { name: string; value: string } }[]; minPriceMinor: number; moderation?: { reason?: string }; updatedAt: string;
 }
 
 function useCategoryOptions() {
@@ -159,8 +159,9 @@ export function ProductEditor({ id }: { id: string }) {
     setDraft(null);
     product.reload();
   });
-  const setMedia = useAction(async (ids: string[]) => {
-    await api(`/vendor/products/${id}`, { method: "PATCH", body: { media: ids.map((publicId) => ({ publicId })) } });
+  type Photo = { publicId: string; forOption?: { name: string; value: string } };
+  const setMedia = useAction(async (photos: Photo[]) => {
+    await api(`/vendor/products/${id}`, { method: "PATCH", body: { media: photos.map((m) => ({ publicId: m.publicId, ...(m.forOption ? { forOption: m.forOption } : {}) })) } });
     product.reload();
   });
   const upload = useAction(async (file: File) => {
@@ -177,7 +178,7 @@ export function ProductEditor({ id }: { id: string }) {
     const res = await fetch(sig.uploadUrl, { method: "POST", body: form });
     if (!res.ok) throw new Error("Upload failed. Use a JPG, PNG or WebP image.");
     const out = (await res.json()) as { public_id: string };
-    await setMedia.run([...p.media.map((m) => m.publicId), out.public_id]);
+    await setMedia.run([...p.media.map((m) => ({ publicId: m.publicId, forOption: m.forOption })), { publicId: out.public_id }]);
   });
   const submit = useAction(async () => {
     await api(`/vendor/products/${id}/submit-review`, { method: "POST", body: {} });
@@ -195,11 +196,11 @@ export function ProductEditor({ id }: { id: string }) {
   if (!p || !d) return null;
   const locked = p.status === "pending_review" || p.status === "archived";
   const move = (i: number, dir: -1 | 1) => {
-    const ids = p.media.map((m) => m.publicId);
+    const photos = p.media.map((m) => ({ publicId: m.publicId, forOption: m.forOption }));
     const j = i + dir;
-    if (j < 0 || j >= ids.length) return;
-    [ids[i], ids[j]] = [ids[j]!, ids[i]!];
-    void setMedia.run(ids);
+    if (j < 0 || j >= photos.length) return;
+    [photos[i], photos[j]] = [photos[j]!, photos[i]!];
+    void setMedia.run(photos);
   };
 
   return (
@@ -228,11 +229,19 @@ export function ProductEditor({ id }: { id: string }) {
               <div className="row" style={{ gap: 4 }}>
                 <Button size="sm" aria-label="Move earlier" disabled={locked || i === 0} onClick={() => move(i, -1)}>←</Button>
                 <Button size="sm" aria-label="Move later" disabled={locked || i === p.media.length - 1} onClick={() => move(i, 1)}>→</Button>
-                <Button size="sm" variant="ghost" aria-label="Remove photo" disabled={locked} onClick={() => void setMedia.run(p.media.filter((x) => x.publicId !== m.publicId).map((x) => x.publicId))}>✕</Button>
+                <Button size="sm" variant="ghost" aria-label="Remove photo" disabled={locked} onClick={() => void setMedia.run(p.media.filter((x) => x.publicId !== m.publicId).map((x) => ({ publicId: x.publicId, forOption: x.forOption })))}>✕</Button>
               </div>
+              {p.options.length > 0 && (
+                <select aria-label={`Which option photo ${i + 1} shows`} className="input input-sm" disabled={locked} value={m.forOption ? `${m.forOption.name}\u0000${m.forOption.value}` : ""}
+                  onChange={(e) => { const [name, value] = e.target.value.split("\u0000"); void setMedia.run(p.media.map((x) => ({ publicId: x.publicId, forOption: x.publicId === m.publicId ? (name && value ? { name, value } : undefined) : x.forOption }))); }}>
+                  <option value="">Shows everything</option>
+                  {p.options.flatMap((o) => o.values.map((val) => <option key={`${o.name}\u0000${val}`} value={`${o.name}\u0000${val}`}>{o.name}: {val}</option>))}
+                </select>
+              )}
             </div>
           ))}
         </div>
+        {p.options.length > 0 && p.media.length > 0 && <p className="muted small">Tie a photo to a colour or other option and shoppers will see it when they pick that value.</p>}
         <label className="btn btn-secondary" style={{ alignSelf: "flex-start", opacity: locked ? 0.55 : 1 }}>
           {upload.pending ? "Uploading…" : "+ Add photo"}
           <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={locked || upload.pending || p.media.length >= 10} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void upload.run(f); }} />
