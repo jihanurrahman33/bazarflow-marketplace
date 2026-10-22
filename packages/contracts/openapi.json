@@ -3345,6 +3345,49 @@
         }
       }
     },
+    "/api/v1/products/{slug}/related": {
+      "get": {
+        "operationId": "products.related",
+        "security": [],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-rate-limit": {
+          "limit": 120,
+          "windowSeconds": 60,
+          "by": "ip"
+        },
+        "responses": {
+          "2XX": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/products/{slug}/reviews/eligibility": {
       "get": {
         "operationId": "products.reviews.eligibility",
@@ -3520,9 +3563,145 @@
         }
       }
     },
+    "/api/v1/products/by-ids": {
+      "get": {
+        "operationId": "products.by-ids",
+        "security": [],
+        "parameters": [],
+        "x-rate-limit": {
+          "limit": 120,
+          "windowSeconds": 60,
+          "by": "ip"
+        },
+        "responses": {
+          "2XX": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/products/recommendations": {
+      "get": {
+        "operationId": "products.recommendations",
+        "security": [],
+        "parameters": [],
+        "x-rate-limit": {
+          "limit": 120,
+          "windowSeconds": 60,
+          "by": "ip"
+        },
+        "responses": {
+          "2XX": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/products": {
       "get": {
         "operationId": "products.list",
+        "security": [],
+        "parameters": [],
+        "x-rate-limit": {
+          "limit": 120,
+          "windowSeconds": 60,
+          "by": "ip"
+        },
+        "responses": {
+          "2XX": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/products/top-rated": {
+      "get": {
+        "operationId": "products.top-rated",
+        "security": [],
+        "parameters": [],
+        "x-rate-limit": {
+          "limit": 120,
+          "windowSeconds": 60,
+          "by": "ip"
+        },
+        "responses": {
+          "2XX": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/products/trending": {
+      "get": {
+        "operationId": "products.trending",
         "security": [],
         "parameters": [],
         "x-rate-limit": {

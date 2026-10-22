@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { getCategories, getProducts, getStores } from "@/lib/server-data";
+import { getCategories, getProducts, getStores, getTopRated, getTrending } from "@/lib/server-data";
 import { CATEGORY_BANNER, siteImage } from "@/lib/site";
 import { HeroCarousel, type Slide } from "./hero";
 import { IconChevronRight, IconGrid, IconReturn, IconShield, IconTruck, IconHeadset } from "./icons";
@@ -141,3 +141,16 @@ export function SellerBanner() {
   );
 }
 
+
+/** What shoppers are buying and rating right now (real orders and reviews). Hidden while there is too little data to say anything. */
+export async function TrendingRail() {
+  const r = await getTrending(12);
+  if (!r.ok || r.value.length < 4) return null;
+  return <ProductRail title="Trending now" subtitle="Popular with shoppers this month" items={r.value} />;
+}
+
+export async function TopRatedRail() {
+  const r = await getTopRated(12);
+  if (!r.ok || r.value.length < 4) return null;
+  return <ProductRail title="Top rated" subtitle="Best reviewed by verified buyers" items={r.value} />;
+}

@@ -25,7 +25,7 @@ export const reviewEligibilityHandler = route<{ slug: string }>({ name: "product
 });
 
 export const listReviewsHandler =route<{ slug: string }>({ name: "products.reviews", auth: false }, async (ctx) => {
-  const r = await listProductReviews(ctx.params.slug, ctx.query(pageQuery));
+  const r = await listProductReviews(ctx.params.slug, ctx.query(pageQuery.extend({ rating: z.coerce.number().int().min(1).max(5).optional(), sort: z.enum(["newest", "highest", "lowest"]).optional() })));
   return page(r.items, r, { meta: { ...{ nextCursor: r.nextCursor, hasMore: r.nextCursor !== null }, summary: r.summary }, cache: "public, s-maxage=30, stale-while-revalidate=120" });
 });
 

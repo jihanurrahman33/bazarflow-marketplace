@@ -7,6 +7,7 @@ import { SLUG_RE } from "@/server/shared/slug";
 import { createCategory, listCategoryTree, updateCategory } from "@/server/modules/catalog/categories";
 import { getPublicProduct, listPublicProducts } from "@/server/modules/catalog/public";
 import { OPTION_PRESETS } from "@/lib/option-presets";
+import { productsByIds, recommendForViewer, relatedProducts, topRatedProducts, trendingProducts } from "@/server/modules/catalog/recommend";
 import { moderateProduct, reviewQueue } from "@/server/modules/catalog/products";
 
 const PUBLIC_CACHE = "public, s-maxage=30, stale-while-revalidate=120";
@@ -19,6 +20,39 @@ export const categoriesHandler = route({ name: "categories.list", auth: false },
 export const optionPresetsHandler = route({ name: "option-presets.list", auth: false }, async () =>
   ok(OPTION_PRESETS, undefined, { cache: "public, s-maxage=3600, stale-while-revalidate=86400" }),
 );
+
+// ----- ranking: trending, top rated, personalised -----
+const idList = z.string().regex(/^[0-9a-f]{24}(,[0-9a-f]{24}){0,19}$/i).transform((v) => v.split(",").map((x) => parseObjectId(x)));
+const rankLimit = z.coerce.number().int().min(1).max(24).default(12);
+const RANK_CACHE = "public, s-maxage=300, stale-while-revalidate=600";
+const NO_STORE = "private, no-store";
+
+export const trendingHandler = route({ name: "products.trending", auth: false, rateLimit: { rule: { name: "products.rank", limit: 120, windowSeconds: 60 }, by: "ip" } }, async (ctx) => {
+  const q = ctx.query(z.strictObject({ limit: rankLimit }));
+  return ok(await trendingProducts(q.limit), undefined, { cache: RANK_CACHE });
+});
+
+export const topRatedHandler = route({ name: "products.top-rated", auth: false, rateLimit: { rule: { name: "products.rank", limit: 120, windowSeconds: 60 }, by: "ip" } }, async (ctx) => {
+  const q = ctx.query(z.strictObject({ limit: rankLimit }));
+  return ok(await topRatedProducts(q.limit), undefined, { cache: RANK_CACHE });
+});
+
+/** The shopper's recently viewed products live in their own browser; the server only turns ids into cards. */
+export const productsByIdsHandler = route({ name: "products.by-ids", auth: false, rateLimit: { rule: { name: "products.rank", limit: 120, windowSeconds: 60 }, by: "ip" } }, async (ctx) => {
+  const q = ctx.query(z.strictObject({ ids: idList }));
+  return ok(await productsByIds(q.ids), undefined, { cache: NO_STORE });
+});
+
+export const recommendationsHandler = route({ name: "products.recommendations", auth: false, rateLimit: { rule: { name: "products.rank", limit: 120, windowSeconds: 60 }, by: "ip" } }, async (ctx) => {
+  const q = ctx.query(z.strictObject({ viewed: idList.optional(), exclude: idList.optional(), limit: rankLimit }));
+  const r = await recommendForViewer(q.viewed ?? [], q.exclude ?? [], q.limit);
+  return ok(r.items, { because: r.because }, { cache: NO_STORE });
+});
+
+export const relatedProductsHandler = route<{ slug: string }>({ name: "products.related", auth: false, rateLimit: { rule: { name: "products.rank", limit: 120, windowSeconds: 60 }, by: "ip" } }, async (ctx) => {
+  const p = await getPublicProduct(ctx.params.slug);
+  return ok(await relatedProducts(parseObjectId(p.id), 12), undefined, { cache: RANK_CACHE });
+});
 
 const productsQuery = pageQuery.extend({
   q: z.string().trim().min(2).max(100).optional(),

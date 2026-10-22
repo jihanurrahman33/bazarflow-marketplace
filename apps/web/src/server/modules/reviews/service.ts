@@ -1,4 +1,4 @@
-import { MongoServerError, ObjectId } from "mongodb";
+import { MongoServerError, ObjectId, type Filter, type Sort } from "mongodb";
 import { getCollections } from "@/server/db/collections";
 import type { ReviewDoc } from "@/server/db/schema";
 import { AppError } from "@/server/shared/errors";
@@ -41,19 +41,34 @@ export async function reviewEligibility(actor: Actor, productSlug: string): Prom
   return bought ? { canReview: true } : { canReview: false, reason: "not_purchased" };
 }
 
-export async function listProductReviews(slug: string, q: { limit: number; cursor?: string }) {
+export type ReviewSort = "newest" | "highest" | "lowest";
+
+/**
+ * One page of a product's published reviews. `rating` filters to a single star count; `sort` is newest (default), highest or lowest.
+ * The cursor is a keyset on (rating, _id) so pages stay stable while new reviews arrive, and ties on rating never skip or repeat a review.
+ */
+export async function listProductReviews(slug: string, q: { limit: number; cursor?: string; rating?: number; sort?: ReviewSort }) {
   const c = await getCollections();
   const product = await c.products.findOne({ slug, status: "published", vendorActive: true }, { projection: { _id: 1 } });
   if (!product) throw new AppError("NOT_FOUND");
-  const cur = decodeCursor<{ id: string }>(q.cursor);
-  const rows = await c.reviews.find({ productId: product._id, status: "published", ...(cur ? { _id: { $lt: new ObjectId(cur.id) } } : {}) }).sort({ _id: -1 }).limit(q.limit + 1).toArray();
+  const sort = q.sort ?? "newest";
+  const cur = decodeCursor<{ id: string; r?: number }>(q.cursor);
+  if (q.cursor && (!cur || !/^[0-9a-f]{24}$/i.test(cur.id))) throw new AppError("VALIDATION_FAILED", { details: [{ field: "cursor", code: "INVALID" }] });
+  const filter: Filter<ReviewDoc> = { productId: product._id, status: "published", ...(q.rating ? { rating: q.rating } : {}) };
+  if (cur) {
+    const id = new ObjectId(cur.id);
+    if (sort === "newest" || cur.r === undefined) filter._id = { $lt: id };
+    else filter.$or = [{ rating: sort === "highest" ? { $lt: cur.r } : { $gt: cur.r } }, { rating: cur.r, _id: { $lt: id } }];
+  }
+  const order = sort === "highest" ? { rating: -1, _id: -1 } : sort === "lowest" ? { rating: 1, _id: -1 } : { _id: -1 };
+  const rows = await c.reviews.find(filter).sort(order as Sort).limit(q.limit + 1).toArray();
   const { items, hasMore } = slicePage(rows, q.limit);
   const users = await c.users.find({ _id: { $in: items.map((r) => r.userId) } }, { projection: { name: 1 } }).toArray();
   // Show first name + initial only: reviewers' full names are not public.
   const nameOf = new Map(users.map((u) => [u._id.toHexString(), u.name.split(" ").map((p, i) => (i === 0 ? p : `${p[0]}.`)).join(" ")]));
   const summary = await ratingSummary(product._id);
   const last = items[items.length - 1];
-  return { items: items.map((r) => toDto(r, nameOf.get(r.userId.toHexString()))), summary, nextCursor: hasMore && last ? encodeCursor({ id: last._id.toHexString() }) : null };
+  return { items: items.map((r) => toDto(r, nameOf.get(r.userId.toHexString()))), summary, nextCursor: hasMore && last ? encodeCursor({ id: last._id.toHexString(), r: last.rating }) : null };
 }
 
 export async function ratingSummary(productId: ObjectId) {

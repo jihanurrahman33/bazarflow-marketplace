@@ -1,12 +1,12 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api, messageFor } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import { useAction, useApi } from "@/lib/hooks";
 import { useSession, useToast } from "./providers";
-import { Alert, Button, ConfirmDialog, Field, Stars } from "./ui";
+import { Alert, Button, ConfirmDialog, Field, LoadMore, Stars } from "./ui";
 
 export interface ReviewItem {
   id: string;
@@ -29,21 +29,52 @@ interface Props {
   productTitle: string;
   initialReviews: ReviewItem[];
   initialSummary: ReviewSummary;
+  initialCursor?: string | null;
 }
 
-export function ProductReviews({ productSlug, productTitle, initialReviews, initialSummary }: Props) {
+type SortKey = "newest" | "highest" | "lowest";
+const SORTS: { value: SortKey; label: string }[] = [{ value: "newest", label: "Newest" }, { value: "highest", label: "Highest rated" }, { value: "lowest", label: "Lowest rated" }];
+const PAGE = 10;
+
+export function ProductReviews({ productSlug, productTitle, initialReviews, initialSummary, initialCursor = null }: Props) {
   const { user, status } = useSession();
   const { toast } = useToast();
   const path = usePathname();
 
   const [reviews, setReviews] = useState<ReviewItem[]>(initialReviews);
   const [summary, setSummary] = useState<ReviewSummary>(initialSummary);
+  const [cursor, setCursor] = useState<string | null>(initialCursor);
+  const [filter, setFilter] = useState<number | null>(null);
+  const [sort, setSort] = useState<SortKey>("newest");
+  const [busy, setBusy] = useState(false);
+  const [loadError, setLoadError] = useState<string>();
+  const first = useRef(true);
   const [writing, setWriting] = useState(false);
   const [posted, setPosted] = useState(false);
   const eligibility = useApi<{ canReview: boolean; reason?: string }>(user?.role === "customer" ? `/products/${productSlug}/reviews/eligibility` : null);
   const [rating, setRating] = useState(5);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
+
+  const pageUrl = (after: string | null) => `/products/${productSlug}/reviews?limit=${PAGE}&sort=${sort}${filter ? `&rating=${filter}` : ""}${after ? `&cursor=${encodeURIComponent(after)}` : ""}`;
+  const fetchPage = async (after: string | null) => {
+    setBusy(true);
+    setLoadError(undefined);
+    try {
+      const r = await api<ReviewItem[]>(pageUrl(after));
+      setReviews((prev) => (after ? [...prev, ...r.data.filter((x) => !prev.some((p) => p.id === x.id))] : r.data));
+      setCursor((r.meta as { nextCursor?: string | null }).nextCursor ?? null);
+    } catch (e) {
+      setLoadError(messageFor(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  // Changing the star filter or the sort order starts again from the first page.
+  useEffect(() => {
+    if (first.current) { first.current = false; return; }
+    void fetchPage(null);
+  }, [filter, sort]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const submit = useAction(async () => {
     const res = await api<ReviewItem>(`/products/${productSlug}/reviews`, {
@@ -56,7 +87,7 @@ export function ProductReviews({ productSlug, productTitle, initialReviews, init
       const newCount = prev.count + 1;
       const newTotal = (prev.average ?? 0) * prev.count + rating;
       const newAvg = Math.round((newTotal / newCount) * 10) / 10;
-      return { ...prev, count: newCount, average: newAvg };
+      return { ...prev, count: newCount, average: newAvg, distribution: prev.distribution ? { ...prev.distribution, [rating]: Number(prev.distribution[rating] ?? 0) + 1 } : prev.distribution };
     });
     toast("Thank you for your review!");
     setWriting(false);
@@ -96,10 +127,30 @@ export function ProductReviews({ productSlug, productTitle, initialReviews, init
         </div>
       </div>
 
-      {reviews.length === 0 ? (
+      {summary.count > 0 && summary.distribution && (
+        <div className="review-controls">
+          <div className="review-dist" role="group" aria-label="Filter reviews by rating">
+            {[5, 4, 3, 2, 1].map((n) => {
+              const count = Number(summary.distribution?.[n] ?? 0);
+              return (
+                <button key={n} type="button" className="dist-row dist-btn" aria-pressed={filter === n} disabled={count === 0} onClick={() => setFilter(filter === n ? null : n)}>
+                  <span>{n}★</span><span className="dist-bar"><i style={{ width: `${(count / summary.count) * 100}%` }} /></span><span className="muted small">{count.toLocaleString("en-BD")}</span>
+                </button>
+              );
+            })}
+          </div>
+          <div className="review-sort">
+            <label htmlFor="review-sort" className="muted small">Sort by</label>
+            <select id="review-sort" className="input input-sm" value={sort} onChange={(e) => setSort(e.target.value as SortKey)}>{SORTS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
+            {filter && <button type="button" className="chip" onClick={() => setFilter(null)}>{filter}★ only ×</button>}
+          </div>
+        </div>
+      )}
+
+      {reviews.length === 0 && !busy ? (
         <div className="card" style={{ padding: "var(--space-xl)", textAlign: "center" }}>
           <p className="muted" style={{ marginBottom: 0 }}>
-            No reviews yet. Only customers who purchased and received this product can leave a verified review.
+            {filter ? `No ${filter}-star reviews.` : "No reviews yet. Only customers who purchased and received this product can leave a verified review."}
           </p>
         </div>
       ) : (
@@ -125,6 +176,10 @@ export function ProductReviews({ productSlug, productTitle, initialReviews, init
           ))}
         </div>
       )}
+
+      {loadError && <Alert tone="danger">{loadError}</Alert>}
+      {busy && reviews.length === 0 && <div className="skeleton" style={{ height: 120 }} aria-busy="true" />}
+      <LoadMore hasMore={cursor !== null} loading={busy} onClick={() => void fetchPage(cursor)} />
 
       <ConfirmDialog
         open={writing}

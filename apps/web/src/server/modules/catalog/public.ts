@@ -100,6 +100,12 @@ export async function listPublicProducts(q: ListProductsQuery) {
     if (hasMore && last) nextCursor = encodeCursor({ p: value(last), id: last._id.toHexString() });
   }
 
+  return { items: await toCards(rows), nextCursor };
+}
+
+/** Listing-card DTOs for a set of product rows: seller, availability and rating are looked up once for the whole set. */
+export async function toCards(rows: ProductDoc[]) {
+  const c = await getCollections();
   const [vendors, avail] = await Promise.all([
     c.vendors.find({ _id: { $in: [...new Set(rows.map((r) => r.vendorId.toHexString()))].map((x) => new ObjectId(x)) } }).toArray(),
     availabilityByVariant(rows.map((r) => r._id)),
@@ -113,15 +119,15 @@ export async function listPublicProducts(q: ListProductsQuery) {
       ]).toArray()
     : [];
   const ratings = new Map(ratingRows.map((r) => [r._id.toHexString(), { average: Math.round(r.avg * 10) / 10, count: r.n }]));
-  return {
-    items: rows.map((p) => ({
-      id: p._id.toHexString(), slug: p.slug, title: p.title, image: cardImage(p), minPriceMinor: p.minPriceMinor, currency: p.currency, ...discountOf(p), ...(ratings.has(p._id.toHexString()) ? { rating: ratings.get(p._id.toHexString()) } : {}),
-      inStock: p.variants.some((v) => v.active && (avail.get(`${p._id.toHexString()}:${v.variantId}`) ?? 0) > 0),
-      vendor: { slug: vmap.get(p.vendorId.toHexString())?.slug, name: vmap.get(p.vendorId.toHexString())?.name },
-    })),
-    nextCursor,
-  };
+  return rows.map((p) => ({
+    id: p._id.toHexString(), slug: p.slug, title: p.title, image: cardImage(p), minPriceMinor: p.minPriceMinor, currency: p.currency, ...discountOf(p), ...(ratings.has(p._id.toHexString()) ? { rating: ratings.get(p._id.toHexString()) } : {}),
+    inStock: p.variants.some((v) => v.active && (avail.get(`${p._id.toHexString()}:${v.variantId}`) ?? 0) > 0),
+    vendor: { slug: vmap.get(p.vendorId.toHexString())?.slug, name: vmap.get(p.vendorId.toHexString())?.name },
+  }));
 }
+
+/** Exposed for the recommender, which needs the same "genuinely discounted" rule as the cards. */
+export const discountPercentOf = (p: ProductDoc): number => discountOf(p)?.discountPercent ?? 0;
 
 export async function getPublicProduct(slug: string) {
   const c = await getCollections();

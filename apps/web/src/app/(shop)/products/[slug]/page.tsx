@@ -7,8 +7,9 @@ import { Suspense } from "react";
 import { IconReturn, IconShield, IconTruck } from "@/components/icons";
 import { ProductRail, RailSkeleton } from "@/components/product-rail";
 import { ProductReviews } from "@/components/product-reviews";
+import { TrackView } from "@/components/track-view";
 import { Stars } from "@/components/ui";
-import { getProduct, getProducts, getReviews } from "@/lib/server-data";
+import { getProduct, getProducts, getRelated, getReviews } from "@/lib/server-data";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -60,6 +61,7 @@ export default async function ProductPage({ params }: Props) {
             {reviews.ok && reviews.value.summary.count > 0 && <><Stars value={reviews.value.summary.average} /><a href="#reviews" className="muted small">({reviews.value.summary.count} reviews)</a></>}
             {v.vendor && <span className="muted">Sold by <Link href={`/vendors/${v.vendor.slug}`}>{v.vendor.name}</Link></span>}
           </div>
+          <TrackView productId={v.id} />
           <ProductBuy productId={v.id} slug={v.slug} currency={v.currency} options={v.options} variants={v.variants} />
           <ul className="pdp-perks" aria-label="Delivery and returns">
             <li><IconTruck width={18} height={18} />Tracked delivery, shipping shown at checkout</li>
@@ -69,30 +71,30 @@ export default async function ProductPage({ params }: Props) {
           <section aria-labelledby="desc" className="pdp-desc"><h2 id="desc">About this item</h2><p style={{ whiteSpace: "pre-line" }}>{v.description}</p></section>
         </div>
       </div>
-      <Suspense fallback={<RailSkeleton />}><MoreFrom vendor={v.vendor?.slug} category={v.categories[0]?.slug} exclude={v.id} /></Suspense>
+      <Suspense fallback={<RailSkeleton />}><MoreFrom id={v.id} vendor={v.vendor?.slug} category={v.categories[0]?.slug} /></Suspense>
       <ProductReviews
         productSlug={v.slug}
         productTitle={v.title}
         initialReviews={reviews.ok ? reviews.value.items : []}
         initialSummary={reviews.ok ? reviews.value.summary : { count: 0, average: null }}
+        initialCursor={reviews.ok ? reviews.value.nextCursor : null}
       />
     </div>
   );
 }
 
-async function MoreFrom({ vendor, category, exclude }: { vendor?: string; category?: string; exclude: string }) {
-  const [fromStore, similar] = await Promise.all([
-    vendor ? getProducts({ sort: "newest", limit: 10, vendor }) : Promise.resolve(undefined),
-    category ? getProducts({ sort: "newest", limit: 10, category }) : Promise.resolve(undefined),
-  ]);
-  const strip = (r: typeof fromStore) => (r?.ok ? r.value.items.filter((p) => p.id !== exclude) : []);
-  const alike = strip(similar);
-  const shown = new Set(alike.map((p) => p.id));
-  // Don't repeat the same products twice: the store rail only lists what the category rail did not.
-  const storeOnly = strip(fromStore).filter((p) => !shown.has(p.id));
+/** Rows under the product: what buyers of this item also bought (only when there is real repeat-purchase data), similar items ranked by popularity and price, then the rest of the store. */
+async function MoreFrom({ id, vendor, category }: { id: string; vendor?: string; category?: string }) {
+  const [related, fromStore] = await Promise.all([getRelated(id), vendor ? getProducts({ sort: "newest", limit: 10, vendor }) : Promise.resolve(undefined)]);
+  const bought = related.ok ? related.value.alsoBought : [];
+  const similar = related.ok ? related.value.similar : [];
+  const shown = new Set([id, ...bought.map((p) => p.id), ...similar.map((p) => p.id)]);
+  // Don't repeat the same products twice: the store row only lists what the rows above did not.
+  const storeOnly = fromStore?.ok ? fromStore.value.items.filter((p) => !shown.has(p.id)) : [];
   return (
     <>
-      <ProductRail title="You may also like" href={category ? `/category/${category}` : undefined} items={alike} />
+      {bought.length >= 3 && <ProductRail title="Customers also bought" items={bought} />}
+      <ProductRail title="Similar items" href={category ? `/category/${category}` : undefined} items={similar} />
       <ProductRail title="More from this store" href={vendor ? `/vendors/${vendor}` : undefined} items={storeOnly} />
     </>
   );

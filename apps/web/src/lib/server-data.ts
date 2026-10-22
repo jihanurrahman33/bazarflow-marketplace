@@ -4,6 +4,7 @@ import { getPublicProduct, listPublicProducts, type ListProductsQuery } from "@/
 import { getPublicVendorBySlug, listVendors } from "@/server/modules/vendors/service";
 import { ObjectId } from "mongodb";
 import { listProductReviews, listVendorReviews } from "@/server/modules/reviews/service";
+import { relatedProducts, topRatedProducts, trendingProducts } from "@/server/modules/catalog/recommend";
 import { vendorTrust } from "@/server/modules/vendors/trust";
 import { isAppError } from "@/server/shared/errors";
 import { logger } from "@/server/shared/logger";
@@ -25,6 +26,9 @@ export const getCategories = () => load("categories", () => listCategoryTree());
 export const getProducts = (q: ListProductsQuery) => load("products", () => listPublicProducts(q));
 export const getProduct = (slug: string) => load("product", () => getPublicProduct(slug));
 export const getVendor = (slug: string) => load("vendor", () => getPublicVendorBySlug(slug));
+export const getTrending = (limit = 12) => load("trending", () => trendingProducts(limit));
+export const getTopRated = (limit = 12) => load("top-rated", () => topRatedProducts(limit));
+export const getRelated = (id: string) => load("related", () => relatedProducts(new ObjectId(id), 12));
 export const getVendorTrust = (slug: string) => load("vendor-trust", () => vendorTrust(slug));
 export const getVendorReviews = (slug: string, limit = 20) => load("vendor-reviews", async () => { const v = await getPublicVendorBySlug(slug); return listVendorReviews(new ObjectId(v.id), limit); });
 export const getReviews = (slug: string) => load("reviews", () => listProductReviews(slug, { limit: 5 }));
