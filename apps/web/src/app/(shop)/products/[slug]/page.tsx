@@ -10,6 +10,7 @@ import { ProductQuestions } from "@/components/product-questions";
 import { ProductReviews } from "@/components/product-reviews";
 import { ProductSelection } from "@/components/product-selection";
 import { TrackView } from "@/components/track-view";
+import { WishButton } from "@/components/wishlist";
 import { Stars } from "@/components/ui";
 import { getT } from "@/lib/i18n-server";
 import { getProduct, getProducts, getRelated, getReviews } from "@/lib/server-data";
@@ -61,7 +62,7 @@ export default async function ProductPage({ params }: Props) {
         <div className="pdp-gallery"><Gallery media={v.media} title={v.title} /></div>
         <div className="pdp-info stack">
           {maxOff > 0 && <span className="badge badge-danger" style={{ alignSelf: "flex-start" }}>{t("Up to {n}% off", { n: maxOff })}</span>}
-          <h1>{v.title}</h1>
+          <div className="pdp-title-row"><h1>{v.title}</h1><WishButton productId={v.id} title={v.title} className="wish-btn wish-inline" /></div>
           <div className="row">
             {reviews.ok && reviews.value.summary.count > 0 && <><Stars value={reviews.value.summary.average} /><a href="#reviews" className="muted small">{t("({n} reviews)", { n: reviews.value.summary.count })}</a></>}
             {v.vendor && <span className="muted">{t("Sold by")} <Link href={`/vendors/${v.vendor.slug}`}>{v.vendor.name}</Link></span>}

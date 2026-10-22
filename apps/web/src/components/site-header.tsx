@@ -116,7 +116,7 @@ export function SiteHeader({ categories }: { categories: NavCategory[] }) {
               )}
             </div>
             <div className="catnav-links">
-              {categories.slice(0, 6).map((c) => <Link key={c.id} href={`/category/${c.slug}`} aria-current={path === `/category/${c.slug}` ? "page" : undefined}>{c.name}</Link>)}
+              {categories.slice(0, 5).map((c) => <Link key={c.id} href={`/category/${c.slug}`} aria-current={path === `/category/${c.slug}` ? "page" : undefined}>{c.name}</Link>)}
               <Link href="/search?sort=newest">{t("New in")}</Link>
             </div>
             <div className="catnav-end">
