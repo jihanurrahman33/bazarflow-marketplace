@@ -1,20 +1,17 @@
 "use client";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { IconChevronDown, IconClose, IconGrid, IconHome, IconMenu, IconSearch, IconCart, IconUser, IconStore } from "./icons";
+import { IconCart, IconChevronDown, IconClose, IconGrid, IconHome, IconMenu, IconReceipt, IconStore, IconUser } from "./icons";
+import { HeaderSearch } from "./header-search";
 import { useSession } from "./providers";
-import { announceNavigation } from "./top-progress";
 import { Button, cx } from "./ui";
 
 export interface NavCategory { id: string; name: string; slug: string; children: { id: string; name: string; slug: string }[] }
 
 export function SiteHeader({ categories }: { categories: NavCategory[] }) {
   const { user, status, signOut, cartCount } = useSession();
-  const router = useRouter();
   const path = usePathname();
-  const [q, setQ] = useState("");
-  const [cat, setCat] = useState("");
   const [drawer, setDrawer] = useState(false);
   const [mega, setMega] = useState(false);
   const megaRef = useRef<HTMLDivElement>(null);
@@ -32,14 +29,6 @@ export function SiteHeader({ categories }: { categories: NavCategory[] }) {
     document.body.style.overflow = drawer ? "hidden" : "";
     return () => { document.removeEventListener("keydown", esc); document.removeEventListener("mousedown", outside); document.body.style.overflow = ""; };
   }, [drawer, mega]);
-
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const term = q.trim();
-    if (term.length < 2) return;
-    announceNavigation();
-    router.push(`/search?q=${encodeURIComponent(term)}${cat ? `&category=${encodeURIComponent(cat)}` : ""}`);
-  };
 
   if (isConsole) {
     return (
@@ -60,41 +49,23 @@ export function SiteHeader({ categories }: { categories: NavCategory[] }) {
   return (
     <>
       <header className="site-header">
-        <div className="topstrip"><div className="container row-between">
-          <span>Secure payments · Seller-verified shops · Easy returns</span>
-          <nav className="row" aria-label="Quick links">
-            <Link href="/help">Help centre</Link>
-            {shopper && <Link href="/become-a-seller">Sell on BazarFlow</Link>}
-            {user?.role === "customer" && <Link href="/orders">Track orders</Link>}
-          </nav>
-        </div></div>
-
         <div className="container bar">
           <button type="button" className="icon-btn menu-btn" aria-label="Open menu" aria-expanded={drawer} onClick={() => setDrawer(true)}><IconMenu /></button>
           <Link href="/" className="brand" aria-label="BazarFlow home">Bazar<span>Flow</span></Link>
-          <form className="hsearch" role="search" onSubmit={submit}>
-            <label htmlFor="site-cat" className="sr-only">Category</label>
-            <select id="site-cat" className="hsearch-cat" value={cat} onChange={(e) => setCat(e.target.value)}>
-              <option value="">All</option>
-              {categories.map((c) => <option key={c.id} value={c.slug}>{c.name}</option>)}
-            </select>
-            <label htmlFor="site-search" className="sr-only">Search products</label>
-            <input id="site-search" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search for products, brands and stores" minLength={2} maxLength={100} autoComplete="off" />
-            <button type="submit" className="hsearch-go" aria-label="Search"><IconSearch /></button>
-          </form>
+          <HeaderSearch categories={categories} />
           <nav className="actions" aria-label="Account">
             {status === "loading" ? <span className="action skeleton" style={{ width: 84, height: 36 }} aria-hidden="true" /> : user ? (
               <>
-                <Link href="/account" className="action"><IconUser /><span className="action-text"><small>Hello, {user.name.split(" ")[0]}</small><strong>Account</strong></span></Link>
-                {consoleHref && <Link href={consoleHref} className="action action-hide-sm"><IconStore /><span className="action-text"><small>Manage</small><strong>{user.role === "admin" ? "Admin" : "My store"}</strong></span></Link>}
-                <Button size="sm" variant="ghost" className="action-hide-sm" onClick={() => void signOut()}>Sign out</Button>
+                {consoleHref && <Link href={consoleHref} className="action action-hide-sm"><IconStore /><span className="action-text">{user.role === "admin" ? "Admin" : "My store"}</span></Link>}
+                {user.role === "customer" && <Link href="/orders" className="action action-hide-sm"><IconReceipt /><span className="action-text">Orders</span></Link>}
+                <Link href="/account" className="action"><IconUser /><span className="action-text">{user.name.split(" ")[0]}</span></Link>
               </>
             ) : (
-              <Link href={signIn} className="action"><IconUser /><span className="action-text"><small>Welcome</small><strong>Sign in</strong></span></Link>
+              <Link href={signIn} className="action"><IconUser /><span className="action-text">Sign in</span></Link>
             )}
             {shopper && (
               <Link href="/cart" className="action cart-link" aria-label={`Cart${cartCount ? `, ${cartCount} items` : ""}`}>
-                <IconCart /><span className="action-text"><small>Your</small><strong>Cart</strong></span>
+                <IconCart /><span className="action-text">Cart</span>
                 {cartCount > 0 && <span className="count-pill" aria-hidden="true">{cartCount > 99 ? "99+" : cartCount}</span>}
               </Link>
             )}
@@ -105,7 +76,7 @@ export function SiteHeader({ categories }: { categories: NavCategory[] }) {
           <div className="container catnav-in">
             <div className="mega" ref={megaRef}>
               <button type="button" className="mega-btn" aria-expanded={mega} aria-controls="mega-panel" onClick={() => setMega((v) => !v)}>
-                <IconMenu /> All categories <IconChevronDown width={16} height={16} />
+                <IconMenu width={18} height={18} /> All categories <IconChevronDown width={14} height={14} />
               </button>
               {mega && (
                 <div id="mega-panel" className="mega-panel">
@@ -120,7 +91,11 @@ export function SiteHeader({ categories }: { categories: NavCategory[] }) {
             </div>
             <div className="catnav-links">
               {categories.map((c) => <Link key={c.id} href={`/category/${c.slug}`} aria-current={path === `/category/${c.slug}` ? "page" : undefined}>{c.name}</Link>)}
-              <Link href="/search?sort=newest" className="catnav-accent">New arrivals</Link>
+              <Link href="/search?sort=newest">New in</Link>
+            </div>
+            <div className="catnav-end">
+              {shopper && <Link href="/become-a-seller">Sell on BazarFlow</Link>}
+              <Link href="/help">Help</Link>
             </div>
           </div>
         </nav>

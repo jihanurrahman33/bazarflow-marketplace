@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { Gallery } from "@/components/gallery";
 import { ProductBuy } from "@/components/product-buy";
 import { Suspense } from "react";
-import { IconReturn, IconShield, IconStore, IconTruck } from "@/components/icons";
+import { IconReturn, IconShield, IconTruck } from "@/components/icons";
 import { ProductRail, RailSkeleton } from "@/components/product-rail";
 import { ProductReviews } from "@/components/product-reviews";
 import { Stars } from "@/components/ui";
@@ -61,22 +61,14 @@ export default async function ProductPage({ params }: Props) {
             {v.vendor && <span className="muted">Sold by <Link href={`/vendors/${v.vendor.slug}`}>{v.vendor.name}</Link></span>}
           </div>
           <ProductBuy productId={v.id} slug={v.slug} currency={v.currency} options={v.options} variants={v.variants} />
+          <ul className="pdp-perks" aria-label="Delivery and returns">
+            <li><IconTruck width={18} height={18} />Tracked delivery, shipping shown at checkout</li>
+            <li><IconReturn width={18} height={18} />Easy returns from your order page</li>
+            <li><IconShield width={18} height={18} />Order confirmed only after payment is verified</li>
+          </ul>
+          <section aria-labelledby="desc" className="pdp-desc"><h2 id="desc">About this item</h2><p style={{ whiteSpace: "pre-line" }}>{v.description}</p></section>
         </div>
-        <aside className="pdp-side stack" aria-label="Delivery and seller">
-          <div className="card stack-sm perks-box">
-            <div className="perk"><IconTruck /><span><strong>Tracked delivery</strong><small>Shipping is set by the seller and shown at checkout</small></span></div>
-            <div className="perk"><IconReturn /><span><strong>Easy returns</strong><small>Request a return from your order page</small></span></div>
-            <div className="perk"><IconShield /><span><strong>Secure payment</strong><small>Your order is confirmed only after payment is verified</small></span></div>
-          </div>
-          {v.vendor && (
-            <Link href={`/vendors/${v.vendor.slug}`} className="card seller-box">
-              <span className="store-logo" aria-hidden="true"><IconStore /></span>
-              <span><small className="muted">Sold by</small><strong>{v.vendor.name}</strong><small className="muted">Visit store →</small></span>
-            </Link>
-          )}
-        </aside>
       </div>
-      <section aria-labelledby="desc" className="card"><h2 id="desc">Product details</h2><p style={{ whiteSpace: "pre-line", marginBottom: 0 }}>{v.description}</p></section>
       <Suspense fallback={<RailSkeleton />}><MoreFrom vendor={v.vendor?.slug} category={v.categories[0]?.slug} exclude={v.id} /></Suspense>
       <ProductReviews
         productSlug={v.slug}

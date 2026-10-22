@@ -1,22 +1,21 @@
 import { Suspense } from "react";
 import {
-  CategoryRails, CategoryTiles, CategoryTilesSkeleton, DealsRail, DepartmentNav, Hero, NewArrivals,
-  NewArrivalsSkeleton, RailSkeleton, SellerBanner, StoresSkeleton, StoresStrip, TrustBar,
+  CategoryRails, CategoryStrip, CategoryStripSkeleton, DealsRail, Hero, NewArrivals, NewArrivalsSkeleton, RailSkeleton,
+  SellerBanner, StoresSkeleton, StoresStrip, ValueStrip,
 } from "@/components/home-sections";
 
-// Each section streams in on its own, so the page shell and hero appear immediately and slow data never blocks the rest.
+// Each section streams in on its own, so the shell and hero appear immediately and slow data never blocks the rest.
 export default function Home() {
   return (
-    <div className="container page stack-lg">
+    <div className="container page home">
       <Hero />
-      <DepartmentNav />
-      <TrustBar />
-      <Suspense fallback={<CategoryTilesSkeleton />}><CategoryTiles /></Suspense>
+      <ValueStrip />
+      <Suspense fallback={<CategoryStripSkeleton />}><CategoryStrip /></Suspense>
       <Suspense fallback={<RailSkeleton title="deals" />}><DealsRail /></Suspense>
-      <Suspense fallback={<RailSkeleton />}><CategoryRails limit={4} /></Suspense>
+      <Suspense fallback={<RailSkeleton />}><CategoryRails limit={3} /></Suspense>
       <Suspense fallback={<StoresSkeleton />}><StoresStrip /></Suspense>
-      <SellerBanner />
       <Suspense fallback={<NewArrivalsSkeleton />}><NewArrivals /></Suspense>
+      <SellerBanner />
     </div>
   );
 }
