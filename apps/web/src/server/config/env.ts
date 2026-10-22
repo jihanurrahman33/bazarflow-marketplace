@@ -33,6 +33,8 @@ const schema = z
     PAYOUT_MAKER_CHECKER_MINOR: z.coerce.number().int().min(0).default(1000000),
     MIN_PAYOUT_MINOR: z.coerce.number().int().min(1).default(50000),
     PAYOUT_HOLD_DAYS: z.coerce.number().int().min(0).max(90).default(7),
+    /** Serves the fake hosted-payment page. Always off in production unless explicitly enabled for a demo environment. */
+    MOCK_PAYMENT_UI: z.enum(["true", "false"]).default("false").transform((v) => v === "true"),
     COD_ENABLED: z.enum(["true", "false"]).default("false").transform((v) => v === "true"),
   })
   .superRefine((env, ctx) => {

@@ -18,6 +18,7 @@ export interface QuoteIssue {
 export interface QuoteLine {
   itemId: string;
   productId: string;
+  productSlug: string;
   variantId: string;
   inventoryItemId: ObjectId;
   sku: string;
@@ -107,7 +108,7 @@ export async function buildQuote(lines: CartDoc["lines"], district: string | und
     };
     const lineTotal = variant.priceMinor * l.quantity;
     group.lines.push({
-      itemId, productId: p._id.toHexString(), variantId: variant.variantId, inventoryItemId: inv._id, sku: variant.sku, title: p.title,
+      itemId, productId: p._id.toHexString(), productSlug: p.slug, variantId: variant.variantId, inventoryItemId: inv._id, sku: variant.sku, title: p.title,
       variantLabel: variantLabel(variant), imageUrl: imageFor(p), unitPriceMinor: variant.priceMinor, quantity: l.quantity,
       lineTotalMinor: lineTotal, vendorId: vendor._id.toHexString(), available,
     });

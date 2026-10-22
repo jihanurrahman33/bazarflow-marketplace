@@ -84,7 +84,7 @@ export async function placeOrder(actor: Actor, input: CheckoutInput) {
         _id: newId(), parentOrderId: orderId, publicOrderNumber: orderNumber, vendorId: new ObjectId(g.vendorId), buyerId: actor.userId,
         vendorName: g.vendor.name, vendorSlug: g.vendor.slug, currency: quote.currency,
         items: g.lines.map((l) => ({
-          productId: new ObjectId(l.productId), variantId: l.variantId, sku: l.sku, title: l.title, variantLabel: l.variantLabel,
+          productId: new ObjectId(l.productId), productSlug: l.productSlug, variantId: l.variantId, sku: l.sku, title: l.title, variantLabel: l.variantLabel,
           imageUrl: l.imageUrl, unitPriceMinor: l.unitPriceMinor, quantity: l.quantity, lineTotalMinor: l.lineTotalMinor,
         })),
         totals: { subtotalMinor: g.subtotalMinor, shippingMinor: g.shippingMinor, totalMinor: g.totalMinor },

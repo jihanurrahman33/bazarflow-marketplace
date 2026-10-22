@@ -5,7 +5,7 @@ export const toVendorOrderCustomerDto = (v: VendorOrderDoc) => ({
   vendor: { name: v.vendorName, slug: v.vendorSlug },
   status: v.fulfillmentStatus,
   items: v.items.map((i) => ({
-    productId: i.productId.toHexString(), variantId: i.variantId, sku: i.sku, title: i.title, variantLabel: i.variantLabel,
+    productId: i.productId.toHexString(), productSlug: i.productSlug, variantId: i.variantId, sku: i.sku, title: i.title, variantLabel: i.variantLabel,
     imageUrl: i.imageUrl, unitPriceMinor: i.unitPriceMinor, quantity: i.quantity, lineTotalMinor: i.lineTotalMinor,
   })),
   totals: v.totals,

@@ -234,6 +234,8 @@ export interface OrderDoc {
 
 export interface OrderItemSnapshot {
   productId: ObjectId;
+  /** Product URL slug at purchase time (immutable), used to link back to the product and its review form. */
+  productSlug: string;
   variantId: string;
   sku: string;
   title: string;
