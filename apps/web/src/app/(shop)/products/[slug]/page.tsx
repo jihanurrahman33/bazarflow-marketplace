@@ -6,6 +6,7 @@ import { ProductBuy } from "@/components/product-buy";
 import { Suspense } from "react";
 import { IconReturn, IconShield, IconTruck } from "@/components/icons";
 import { ProductRail, RailSkeleton } from "@/components/product-rail";
+import { ProductQuestions } from "@/components/product-questions";
 import { ProductReviews } from "@/components/product-reviews";
 import { ProductSelection } from "@/components/product-selection";
 import { TrackView } from "@/components/track-view";
@@ -75,6 +76,7 @@ export default async function ProductPage({ params }: Props) {
       </div>
       </ProductSelection>
       <Suspense fallback={<RailSkeleton />}><MoreFrom id={v.id} vendor={v.vendor?.slug} category={v.categories[0]?.slug} /></Suspense>
+      <ProductQuestions slug={v.slug} />
       <ProductReviews
         productSlug={v.slug}
         productTitle={v.title}

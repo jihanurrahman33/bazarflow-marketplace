@@ -7,9 +7,11 @@ import { decodeCursor, encodeCursor, slicePage } from "@/server/shared/paginatio
 import { writeAudit } from "@/server/modules/audit/audit";
 import type { Actor } from "@/server/modules/authorization/actor";
 import { invalidateCatalog } from "@/server/modules/catalog/cache";
+import { enqueue } from "@/server/modules/outbox/outbox";
 
 const toDto = (r: ReviewDoc, authorName?: string) => ({
   id: r._id.toHexString(), rating: r.rating, title: r.title, body: r.body, author: authorName ?? "Customer", verifiedPurchase: true, createdAt: r.createdAt.toISOString(),
+  ...(r.reply ? { reply: { body: r.reply.body, at: r.reply.at.toISOString() } } : {}),
 });
 
 /** Verified-buyer rule: the reviewer must have a delivered (not returned) vendor order that contains the product. */
@@ -115,4 +117,39 @@ export async function listVendorReviews(vendorId: ObjectId, limit: number) {
   const nameOf = new Map(users.map((u) => [u._id.toHexString(), u.name.split(" ").map((p, i) => (i === 0 ? p : `${p[0]}.`)).join(" ")]));
   const prodOf = new Map(prods.map((p) => [p._id.toHexString(), p]));
   return rows.map((r) => ({ ...toDto(r, nameOf.get(r.userId.toHexString())), product: { title: prodOf.get(r.productId.toHexString())?.title ?? "Product", slug: prodOf.get(r.productId.toHexString())?.slug } }));
+}
+
+/** The store answers a review of one of its products, publicly. One reply per review; sending again edits it. */
+export async function replyToReview(vendorId: ObjectId, reviewId: ObjectId, body: string) {
+  const c = await getCollections();
+  const r = await c.reviews.findOneAndUpdate({ _id: reviewId, vendorId, status: "published" }, { $set: { reply: { body, at: new Date() } } }, { returnDocument: "after" });
+  if (!r) throw new AppError("NOT_FOUND");
+  const p = await c.products.findOne({ _id: r.productId }, { projection: { slug: 1, title: 1 } });
+  if (p) {
+    await enqueue({
+      type: "notify.user", aggregateType: "review", aggregateId: reviewId.toHexString(), dedupeKey: `review-reply:${reviewId.toHexString()}:${r.reply!.at.getTime()}`,
+      payload: { userId: r.userId.toHexString(), eventType: "review.reply", title: "The seller replied to your review", body: `${p.title}: ${body.slice(0, 120)}`, deepLink: `/products/${p.slug}#reviews` },
+    });
+    await invalidateCatalog(p.slug);
+  }
+  return toDto(r);
+}
+
+/** The seller's view of reviews on their products, newest first; `unanswered` shows only those without a reply. */
+export async function listReviewsForSeller(vendorId: ObjectId, q: { limit: number; cursor?: string; unanswered?: boolean }) {
+  const c = await getCollections();
+  const cur = decodeCursor<{ id: string }>(q.cursor);
+  const rows = await c.reviews.find({ vendorId, status: "published", ...(q.unanswered ? { reply: { $exists: false } } : {}), ...(cur ? { _id: { $lt: new ObjectId(cur.id) } } : {}) }).sort({ _id: -1 }).limit(q.limit + 1).toArray();
+  const { items, hasMore } = slicePage(rows, q.limit);
+  const [users, prods] = await Promise.all([
+    c.users.find({ _id: { $in: items.map((r) => r.userId) } }, { projection: { name: 1 } }).toArray(),
+    c.products.find({ _id: { $in: items.map((r) => r.productId) } }, { projection: { title: 1, slug: 1 } }).toArray(),
+  ]);
+  const nameOf = new Map(users.map((u) => [u._id.toHexString(), u.name.split(" ").map((p, i) => (i === 0 ? p : `${p[0]}.`)).join(" ")]));
+  const prodOf = new Map(prods.map((p) => [p._id.toHexString(), p]));
+  const last = items[items.length - 1];
+  return {
+    items: items.map((r) => ({ ...toDto(r, nameOf.get(r.userId.toHexString())), product: { title: prodOf.get(r.productId.toHexString())?.title ?? "Product", slug: prodOf.get(r.productId.toHexString())?.slug } })),
+    nextCursor: hasMore && last ? encodeCursor({ id: last._id.toHexString() }) : null,
+  };
 }

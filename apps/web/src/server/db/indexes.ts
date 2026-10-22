@@ -130,6 +130,10 @@ export const INDEXES: Spec = {
     { key: { tokens: 1 }, name: "ix_knowledge_tokens" },
   ],
   [C.rateLimits]: [{ key: { expiresAt: 1 }, expireAfterSeconds: 0, name: "ttl_rate_limits" }],
+  [C.questions]: [
+    { key: { productId: 1, status: 1, _id: -1 }, name: "questions_product" },
+    { key: { vendorId: 1, status: 1, answered: 1, _id: -1 }, name: "questions_vendor" },
+  ],
   [C.coupons]: [
     { key: { code: 1 }, unique: true, name: "uq_coupons_code" },
     { key: { vendorId: 1, _id: -1 }, name: "coupons_vendor" },

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { ConsoleShell } from "@/components/console-kit";
-import { IconBox, IconChart, IconCoin, IconReceipt, IconSettings, IconTag } from "@/components/icons";
+import { IconBox, IconChart, IconChat, IconCoin, IconReceipt, IconSettings, IconStar, IconTag } from "@/components/icons";
 
 export const metadata: Metadata = { title: { default: "Seller console", template: "%s · Seller console" }, robots: { index: false } };
 
@@ -13,6 +13,8 @@ export default function VendorLayout({ children }: { children: ReactNode }) {
       { href: "/vendor/products", label: "Products", icon: <IconTag />, group: "Catalogue" },
       { href: "/vendor/inventory", label: "Inventory", icon: <IconBox />, group: "Catalogue" },
       { href: "/vendor/coupons", label: "Coupons", icon: <IconTag />, group: "Catalogue" },
+      { href: "/vendor/questions", label: "Questions", icon: <IconChat />, group: "Customers" },
+      { href: "/vendor/reviews", label: "Reviews", icon: <IconStar />, group: "Customers" },
       { href: "/vendor/payouts", label: "Earnings & payouts", icon: <IconCoin />, group: "Money" },
       { href: "/vendor/settings", label: "Store settings", icon: <IconSettings />, group: "Store" },
     ]}>{children}</ConsoleShell>

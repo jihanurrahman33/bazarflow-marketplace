@@ -470,6 +470,8 @@ export interface ReviewDoc {
   title?: string;
   body: string;
   status: ReviewStatus;
+  /** The selling store's public response. */
+  reply?: { body: string; at: Date };
   createdAt: Date;
 }
 
@@ -549,5 +551,18 @@ export interface CouponRedemptionDoc {
   discountMinor: number;
   /** True once the order was cancelled and the use was given back. */
   released: boolean;
+  createdAt: Date;
+}
+
+/** A shopper's public question about a product, answered by the store that sells it. */
+export interface QuestionDoc {
+  _id: ObjectId;
+  productId: ObjectId;
+  vendorId: ObjectId;
+  userId: ObjectId;
+  body: string;
+  status: "published" | "hidden";
+  answered: boolean;
+  answer?: { body: string; at: Date };
   createdAt: Date;
 }

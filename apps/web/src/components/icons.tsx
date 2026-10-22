@@ -37,3 +37,5 @@ export const IconCard = (p: SVGProps<SVGSVGElement>) => <Svg {...p}><rect x="2.5
 export const IconShieldLock = (p: SVGProps<SVGSVGElement>) => <Svg {...p}><path d="M12 3 5 6v5c0 4.5 3 8 7 10 4-2 7-5.5 7-10V6z" /><rect x="9" y="11" width="6" height="5" rx="1" /></Svg>;
 export const IconExternal = (p: SVGProps<SVGSVGElement>) => <Svg {...p}><path d="M14 4h6v6M20 4 10 14M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" /></Svg>;
 export const IconHeart = (p: SVGProps<SVGSVGElement>) => <Svg {...p}><path d="M12 20.5s-7.5-4.6-9.2-9.3C1.7 8 3.6 5 6.8 5c2 0 3.8 1.1 5.2 3 1.4-1.9 3.2-3 5.2-3 3.2 0 5.1 3 4 6.2-1.7 4.7-9.2 9.3-9.2 9.3Z" /></Svg>;
+export const IconChat = (p: SVGProps<SVGSVGElement>) => <Svg {...p}><path d="M4 5h16v11H9l-5 4V5Z" /></Svg>;
+export const IconStar = (p: SVGProps<SVGSVGElement>) => <Svg {...p}><path d="m12 3 2.7 5.7 6.3.8-4.6 4.3 1.2 6.2L12 17l-5.6 3 1.2-6.2L3 9.5l6.3-.8L12 3Z" /></Svg>;

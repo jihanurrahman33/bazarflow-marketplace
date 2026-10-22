@@ -34,6 +34,7 @@ export const C = {
   analyticsEvents: "analyticsEvents",
   wishlistItems: "wishlistItems",
   coupons: "coupons",
+  questions: "questions",
   couponRedemptions: "couponRedemptions",
 } as const;
 
@@ -68,6 +69,7 @@ export interface Collections {
   analyticsEvents: Collection<S.AnalyticsEventDoc>;
   wishlistItems: Collection<S.WishlistItemDoc>;
   coupons: Collection<S.CouponDoc>;
+  questions: Collection<S.QuestionDoc>;
   couponRedemptions: Collection<S.CouponRedemptionDoc>;
 }
 

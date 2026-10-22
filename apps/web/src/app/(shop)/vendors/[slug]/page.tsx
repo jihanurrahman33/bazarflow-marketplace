@@ -95,6 +95,7 @@ async function StoreReviews({ slug, trust }: { slug: string; trust: Trust | null
           <article key={x.id} className="store-review">
             <div className="row-between"><span><Stars value={x.rating} />{x.title && <strong> {x.title}</strong>}</span><span className="muted small">{formatDate(x.createdAt, { dateStyle: "medium" })}</span></div>
             <p>{x.body}</p>
+            {x.reply && <div className="seller-reply"><strong className="small">Seller response</strong><p>{x.reply.body}</p></div>}
             <p className="muted small">{x.author} · <span className="badge badge-success">Verified purchase</span> · on {x.product.slug ? <Link href={`/products/${x.product.slug}`}>{x.product.title}</Link> : x.product.title}</p>
           </article>
         ))}

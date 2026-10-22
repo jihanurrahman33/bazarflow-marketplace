@@ -16,6 +16,7 @@ export interface ReviewItem {
   author: string;
   verifiedPurchase: boolean;
   createdAt: string;
+  reply?: { body: string; at: string };
 }
 
 export interface ReviewSummary {
@@ -164,6 +165,7 @@ export function ProductReviews({ productSlug, productTitle, initialReviews, init
                 <span className="muted small">{formatDate(r.createdAt, { dateStyle: "medium" })}</span>
               </div>
               <p style={{ whiteSpace: "pre-line", marginBottom: 4 }}>{r.body}</p>
+              {r.reply && <div className="seller-reply"><strong className="small">Seller response</strong><p>{r.reply.body}</p></div>}
               <div className="row" style={{ alignItems: "center", gap: "var(--space-xs)" }}>
                 <span className="muted small">{r.author}</span>
                 {r.verifiedPurchase && (
