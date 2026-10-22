@@ -454,3 +454,6 @@ main a:not(.btn):not(.pcard):not(.chip):not(.cat-chip):not(.store-chip):not(.see
 .mega-subs a:hover { border-color: var(--color-text-primary); color: var(--color-text-primary); }
 .mega-actions { display: flex; gap: 8px; }
 .mega-actions a { border-bottom: 0; padding: 8px 14px; }
+.catnav .mega-actions a.btn-primary, .catnav .mega-actions a.btn-primary:hover { color: var(--color-on-primary); }
+.catnav .mega-actions a { color: var(--color-text-primary); }
+.catnav .mega-actions a.btn-primary { background: var(--color-primary); }
