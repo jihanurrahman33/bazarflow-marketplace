@@ -159,6 +159,9 @@ export async function registerUser(input: { email: string; password: string; nam
   return { user: toUserDto(user), tokens };
 }
 
+/** Staff (seller and admin) sign-ins are security-relevant, so they are recorded; customer sign-ins are not (volume, little value). */
+const isStaff = (role: string): boolean => role === "admin" || role === "vendor";
+
 export async function login(input: { email: string; password: string; device: DeviceInfo }) {
   const c = await getCollections();
   const user = await c.users.findOne({ emailNormalized: normalizeEmail(input.email) });
@@ -182,6 +185,9 @@ export async function login(input: { email: string; password: string; device: De
         ? { $set: { failedLoginCount: 0, lockedUntil: new Date(now.getTime() + LOCK_MINUTES * 60_000) } }
         : { $set: { failedLoginCount: failed } },
     );
+    if (isStaff(user.role)) {
+      await writeAudit({ actorId: user._id, actorRole: user.role, action: failed >= MAX_FAILED_LOGINS ? "auth.account_locked" : "auth.login_failed", resourceType: "user", resourceId: user._id.toHexString() });
+    }
     throw new AppError("INVALID_CREDENTIALS");
   }
   if (user.status !== "active") throw new AppError("ACCOUNT_SUSPENDED");
@@ -189,6 +195,9 @@ export async function login(input: { email: string; password: string; device: De
     await c.users.updateOne({ _id: user._id }, { $set: { failedLoginCount: 0 }, $unset: { lockedUntil: "" } });
   }
   const tokens = await issueSession(user, input.device);
+  if (isStaff(user.role)) {
+    await writeAudit({ actorId: user._id, actorRole: user.role, action: "auth.login", resourceType: "user", resourceId: user._id.toHexString() });
+  }
   return { user: toUserDto(user), tokens };
 }
 
@@ -250,7 +259,11 @@ export async function logoutAll(userId: ObjectId): Promise<void> {
 export async function logoutByRefreshToken(refreshToken: string): Promise<void> {
   const c = await getCollections();
   const s = await c.sessions.findOne({ tokenHash: hashRefreshToken(refreshToken) });
-  if (s) await revokeFamily(s.familyId, "logout");
+  if (s) {
+    await revokeFamily(s.familyId, "logout");
+    const u = await c.users.findOne({ _id: s.userId }, { projection: { role: 1 } });
+    if (u && isStaff(u.role)) await writeAudit({ actorId: s.userId, actorRole: u.role, action: "auth.logout", resourceType: "user", resourceId: s.userId.toHexString() });
+  }
 }
 
 export async function verifyContact(userId: ObjectId, code: string): Promise<UserDto> {

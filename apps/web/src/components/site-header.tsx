@@ -48,8 +48,7 @@ export function SiteHeader({ categories }: { categories: NavCategory[] }) {
           <Link href="/" className="brand">Bazar<span>Flow</span></Link>
           <nav className="nav" aria-label="Main">
             <Link href="/">Storefront</Link>
-            {consoleHref && <Link href={consoleHref}>{user?.role === "admin" ? "Admin" : "Seller console"}</Link>}
-            {user && <Link href="/account">{user.name.split(" ")[0]}</Link>}
+            {user && <Link href="/account">{user.name}</Link>}
             {user && <Button size="sm" variant="ghost" onClick={() => void signOut()}>Sign out</Button>}
           </nav>
         </div>

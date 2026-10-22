@@ -49,9 +49,13 @@ export async function listAuditLogs(q: { resourceType?: string; resourceId?: str
   const rows = await c.auditLogs.find(filter).sort({ _id: -1 }).limit(q.limit + 1).toArray();
   const { items, hasMore } = slicePage(rows, q.limit);
   const last = items[items.length - 1];
+  // Who did it: one batched lookup so the log reads "Admin · name@example.com", not just a role.
+  const actorIds = [...new Set(items.map((a) => a.actorId?.toHexString()).filter((x): x is string => !!x))].map((x) => new ObjectId(x));
+  const actors = actorIds.length ? await c.users.find({ _id: { $in: actorIds } }, { projection: { name: 1, email: 1 } }).toArray() : [];
+  const actorOf = new Map(actors.map((u) => [u._id.toHexString(), { name: u.name, email: u.email }]));
   return {
     items: items.map((a) => ({
-      id: a._id.toHexString(), actorId: a.actorId?.toHexString(), actorRole: a.actorRole, action: a.action,
+      id: a._id.toHexString(), actorId: a.actorId?.toHexString(), actor: a.actorId ? actorOf.get(a.actorId.toHexString()) : undefined, actorRole: a.actorRole, action: a.action,
       resourceType: a.resourceType, resourceId: a.resourceId, reason: a.reason, before: a.before, after: a.after,
       requestId: a.requestId, createdAt: a.createdAt.toISOString(),
     })),

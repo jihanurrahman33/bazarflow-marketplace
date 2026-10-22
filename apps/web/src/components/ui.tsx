@@ -136,8 +136,15 @@ export function PageHeader({ title, children, subtitle }: { title: string; subti
   );
 }
 
-export function Stat({ label, value, hint }: { label: string; value: ReactNode; hint?: string }) {
-  return <div className="stat"><div className="label">{label}</div><div className="value">{value}</div>{hint && <div className="muted small">{hint}</div>}</div>;
+export function Stat({ label, value, hint, icon, tone = "primary", children }: { label: string; value: ReactNode; hint?: ReactNode; icon?: ReactNode; tone?: "primary" | "warning" | "danger" | "info" | "success"; children?: ReactNode }) {
+  return (
+    <div className="stat">
+      <div className="stat-head"><div className="label">{label}</div>{icon && <span className={`stat-icon tone-${tone}`} aria-hidden="true">{icon}</span>}</div>
+      <div className="value">{value}</div>
+      {hint && <div className="muted small">{hint}</div>}
+      {children}
+    </div>
+  );
 }
 
 export function LoadMore({ hasMore, loading, onClick }: { hasMore: boolean; loading: boolean; onClick: () => void }) {

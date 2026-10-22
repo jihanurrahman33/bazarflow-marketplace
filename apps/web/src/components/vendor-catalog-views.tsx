@@ -5,7 +5,8 @@ import { useMemo, useState } from "react";
 import { api, messageFor } from "@/lib/api";
 import { formatDate, parseMoneyInput } from "@/lib/format";
 import { useAction, useApi } from "@/lib/hooks";
-import { FilterSelect, ListTable } from "./console-kit";
+import { ListTable, StatusTabs } from "./console-kit";
+import { SmartImage } from "./smart-image";
 import { useToast } from "./providers";
 import { Alert, Button, ConfirmDialog, ErrorPanel, Field, fieldMessage, LinkButton, ListSkeleton, Money, PageHeader, StatusBadge, type Column } from "./ui";
 
@@ -25,18 +26,24 @@ function useCategoryOptions() {
 // ---------- list ----------
 export function ProductList() {
   const [status, setStatus] = useState("");
+  const stockOf = (p: VProduct) => p.variants.reduce((a, x) => a + Math.max(0, (x.stock?.onHand ?? 0) - (x.stock?.reserved ?? 0)), 0);
   const cols: Column<VProduct>[] = [
-    { key: "t", header: "Product", render: (p) => <Link href={`/vendor/products/${p.id}`}><strong>{p.title}</strong></Link> },
-    { key: "s", header: "Status", render: (p) => <StatusBadge status={p.status} /> },
-    { key: "v", header: "Variants", numeric: true, render: (p) => p.variants.length },
+    { key: "t", header: "Product", render: (p) => (
+      <Link href={`/vendor/products/${p.id}`} className="prod-cell">
+        <span className="prod-thumb">{p.media[0] ? <SmartImage src={p.media[0].url} alt="" width={96} height={96} /> : <span className="prod-thumb-empty" aria-hidden="true" />}</span>
+        <span><strong>{p.title}</strong><small className="muted">{p.variants.length} variant{p.variants.length === 1 ? "" : "s"}</small></span>
+      </Link>
+    ) },
+    { key: "s", header: "Status", render: (p) => <><StatusBadge status={p.status} />{p.status === "rejected" && p.moderation?.reason && <small className="muted" style={{ display: "block" }}>{p.moderation.reason}</small>}</> },
+    { key: "k", header: "In stock", numeric: true, render: (p) => { const n = stockOf(p); return <span className={n === 0 ? "badge badge-danger" : n <= 5 ? "badge badge-warning" : undefined}>{n}</span>; } },
     { key: "p", header: "From", numeric: true, render: (p) => <Money minor={p.minPriceMinor} currency={p.currency} /> },
     { key: "u", header: "Updated", render: (p) => formatDate(p.updatedAt, { dateStyle: "medium" }) },
   ];
   return (
     <div className="stack">
       <PageHeader title="Products"><LinkButton href="/vendor/products/new" variant="primary">New product</LinkButton></PageHeader>
-      <FilterSelect label="Status" value={status} onChange={setStatus} options={[{ value: "", label: "All" }, ...["draft", "pending_review", "published", "rejected", "archived"].map((s) => ({ value: s, label: s.replace("_", " ") }))]} />
-      <ListTable<VProduct> path={`/vendor/products?limit=20${status ? `&status=${status}` : ""}`} columns={cols} caption="Products" empty="No products yet" />
+      <StatusTabs label="Product status" value={status} onChange={setStatus} options={[{ value: "", label: "All" }, ...["draft", "pending_review", "published", "rejected", "archived"].map((s) => ({ value: s, label: s.replace("_", " ") }))]} />
+      <ListTable<VProduct> key={status} path={`/vendor/products?limit=20${status ? `&status=${status}` : ""}`} columns={cols} caption="Products" empty="No products yet" searchText={(p) => p.title} />
     </div>
   );
 }

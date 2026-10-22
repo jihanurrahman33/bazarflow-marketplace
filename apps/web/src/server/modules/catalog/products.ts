@@ -178,7 +178,9 @@ export async function listVendorProducts(vendorId: ObjectId, q: { status?: Produ
   const rows = await c.products.find(filter).sort({ _id: -1 }).limit(q.limit + 1).toArray();
   const { items, hasMore } = slicePage(rows, q.limit);
   const last = items[items.length - 1];
-  return { items: items.map((p) => toVendorProductDto(p)), nextCursor: hasMore && last ? encodeCursor({ id: last._id.toHexString() }) : null };
+  const inv = items.length ? await c.inventoryItems.find({ productId: { $in: items.map((p) => p._id) } }).toArray() : [];
+  const stockOf = (productId: ObjectId) => new Map(inv.filter((i) => i.productId.equals(productId)).map((i) => [i.variantId, { onHand: i.onHand, reserved: i.reserved, inventoryItemId: i._id.toHexString() }]));
+  return { items: items.map((p) => toVendorProductDto(p, stockOf(p._id))), nextCursor: hasMore && last ? encodeCursor({ id: last._id.toHexString() }) : null };
 }
 
 export interface UpdateProductInput {
