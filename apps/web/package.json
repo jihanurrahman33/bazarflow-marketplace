@@ -13,7 +13,9 @@
     "test:watch": "vitest",
     "db:indexes": "tsx scripts/ensure-indexes.ts",
     "db:seed": "tsx scripts/seed.ts",
-    "worker": "tsx scripts/worker.ts"
+    "worker": "tsx scripts/worker.ts",
+    "contract": "tsx scripts/gen-openapi.ts",
+    "smoke": "tsx scripts/smoke.ts"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.2.2",
@@ -31,6 +33,7 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "eslint": "^10.13.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "mongodb-memory-server": "^11.3.0",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3",

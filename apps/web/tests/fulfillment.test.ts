@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { ObjectId } from "mongodb";
 import { setupTestDb, teardownTestDb } from "./helpers/db";
 import { call } from "./helpers/http";
-import { makeAdmin, makeCustomer, makeUser, useFakeMedia } from "./helpers/factory";
+import { makeAdmin, makeCustomer, makeUser, installFakeMedia } from "./helpers/factory";
 import { makeShop, placeShopOrder, type Shop } from "./helpers/shop";
 import {
   acceptOrderHandler, adminCancelVendorOrderHandler, approveReturnHandler, cancelOrderVendorHandler, deliverOrderHandler, rejectReturnHandler,
@@ -26,7 +26,7 @@ let shop: Shop;
 
 beforeAll(async () => {
   await setupTestDb();
-  useFakeMedia();
+  installFakeMedia();
   shop = await makeShop();
 });
 afterAll(teardownTestDb);

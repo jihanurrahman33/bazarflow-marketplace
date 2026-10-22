@@ -62,7 +62,7 @@ import { FakeMediaProvider, setMediaProvider, vendorMediaFolder } from "@/server
 
 export const media = new FakeMediaProvider();
 
-export function useFakeMedia() {
+export function installFakeMedia() {
   setMediaProvider(media);
 }
 

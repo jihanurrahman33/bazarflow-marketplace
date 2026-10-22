@@ -109,8 +109,13 @@ export async function listVendorInventory(vendorId: ObjectId, q: { limit: number
   if (q.lowStock !== undefined) filter.$expr = { $lte: [{ $subtract: ["$onHand", "$reserved"] }, q.lowStock] };
   const rows = await c.inventoryItems.find(filter).sort({ _id: 1 }).limit(q.limit + 1).toArray();
   const { items, hasMore } = slicePage(rows, q.limit);
+  const products = await c.products.find({ _id: { $in: items.map((i) => i.productId) } }, { projection: { title: 1 } }).toArray();
+  const titles = new Map(products.map((p) => [p._id.toHexString(), p.title]));
   const last = items[items.length - 1];
-  return { items: items.map(toDto), nextCursor: hasMore && last ? encodeCursor({ id: last._id.toHexString() }) : null };
+  return {
+    items: items.map((i) => ({ ...toDto(i), productTitle: titles.get(i.productId.toHexString()) })),
+    nextCursor: hasMore && last ? encodeCursor({ id: last._id.toHexString() }) : null,
+  };
 }
 
 /**

@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { setupTestDb, teardownTestDb } from "./helpers/db";
 import { call } from "./helpers/http";
-import { makeAdmin, makeCategory, makeCustomer, makeProduct, makeVendor, media, uniq, useFakeMedia } from "./helpers/factory";
+import { makeAdmin, makeCategory, makeCustomer, makeProduct, makeVendor, media, uniq, installFakeMedia } from "./helpers/factory";
 import {
   approveProductHandler, categoriesHandler, productDetailHandler, productsHandler, rejectProductHandler, reviewQueueHandler, vendorProductsPublicHandler,
   createCategoryHandler,
@@ -23,7 +23,7 @@ let cat: { id: string; slug: string };
 
 beforeAll(async () => {
   await setupTestDb();
-  useFakeMedia();
+  installFakeMedia();
   admin = await makeAdmin();
   cat = await makeCategory(admin, "Fashion " + uniq());
 });
@@ -142,7 +142,7 @@ describe("media", () => {
     expect(signParams({ timestamp: 1315060510, folder: "f", allowed_formats: "jpg" }, "secret")).toBe(signParams({ allowed_formats: "jpg", folder: "f", timestamp: 1315060510 }, "secret"));
     setMediaProvider(undefined);
     expect((await call(uploadSignatureHandler, { method: "POST", token: v.user.token })).status).toBe(501);
-    useFakeMedia();
+    installFakeMedia();
   });
 });
 

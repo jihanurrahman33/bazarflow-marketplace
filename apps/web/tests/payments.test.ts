@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { ObjectId } from "mongodb";
 import { setupTestDb, teardownTestDb } from "./helpers/db";
 import { call } from "./helpers/http";
-import { makeAdmin, makeCategory, makeCustomer, makeProduct, makeVendor, uniq, useFakeMedia } from "./helpers/factory";
+import { makeAdmin, makeCategory, makeCustomer, makeProduct, makeVendor, uniq, installFakeMedia } from "./helpers/factory";
 import {
   addCartItemHandler, cancelOrderHandler, checkoutHandler, createAddressHandler,
 } from "@/server/api/handlers/shopping";
@@ -30,7 +30,7 @@ const key = () => `pay-key-${Date.now()}-${++idem}-abcdef`;
 
 beforeAll(async () => {
   await setupTestDb();
-  useFakeMedia();
+  installFakeMedia();
   admin = await makeAdmin();
   cat = await makeCategory(admin, "Pay " + uniq());
 });

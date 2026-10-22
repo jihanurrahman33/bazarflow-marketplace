@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ObjectId } from "mongodb";
 import { setupTestDb, teardownTestDb } from "./helpers/db";
-import { useTestEnv } from "./helpers/env";
+import { applyTestEnv } from "./helpers/env";
 import { call } from "./helpers/http";
-import { makeAdmin, makeCategory, makeCustomer, makeProduct, makeVendor, uniq, useFakeMedia } from "./helpers/factory";
+import { makeAdmin, makeCategory, makeCustomer, makeProduct, makeVendor, uniq, installFakeMedia } from "./helpers/factory";
 import {
   addCartItemHandler, cancelOrderHandler, checkoutHandler, createAddressHandler, deleteAddressHandler, deleteCartItemHandler, getCartHandler,
   getOrderHandler, listAddressesHandler, listOrdersHandler, patchCartItemHandler, quoteHandler, updateAddressHandler,
@@ -23,7 +23,7 @@ type Customer = Awaited<ReturnType<typeof makeCustomer>>;
 
 beforeAll(async () => {
   await setupTestDb();
-  useFakeMedia();
+  installFakeMedia();
   admin = await makeAdmin();
   cat = await makeCategory(admin, "Home " + uniq());
 });
@@ -276,12 +276,12 @@ describe("cash on delivery", () => {
     const { p, variantId } = await vendorWith(10000, 5);
     const u = await shopper();
     await add(u, p, variantId, 1);
-    useTestEnv({ MONGODB_DB: dbName, COD_ENABLED: "false" });
+    applyTestEnv({ MONGODB_DB: dbName, COD_ENABLED: "false" });
     try {
       expect((await checkout(u, 10000, "cod")).error?.code).toBe("BUSINESS_RULE_VIOLATION");
       expect((await call(quoteHandler, { method: "POST", token: u.token, body: { addressId: u.addressId } })).data.paymentMethods).toEqual(["online"]);
     } finally {
-      useTestEnv({ MONGODB_DB: dbName });
+      applyTestEnv({ MONGODB_DB: dbName });
     }
   });
 

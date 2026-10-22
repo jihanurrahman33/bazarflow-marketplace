@@ -15,7 +15,7 @@ export const TEST_ENV_SOURCE = {
   COD_ENABLED: "true",
 } as const;
 
-export function useTestEnv(overrides: Record<string, string> = {}) {
+export function applyTestEnv(overrides: Record<string, string> = {}) {
   const env = parseEnv({ ...TEST_ENV_SOURCE, MONGODB_URI: process.env.TEST_MONGODB_URI ?? "mongodb://localhost", ...overrides });
   setEnvForTests(env);
   return env;
