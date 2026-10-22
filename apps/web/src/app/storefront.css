@@ -457,3 +457,6 @@ main a:not(.btn):not(.pcard):not(.chip):not(.cat-chip):not(.store-chip):not(.see
 .catnav .mega-actions a.btn-primary, .catnav .mega-actions a.btn-primary:hover { color: var(--color-on-primary); }
 .catnav .mega-actions a { color: var(--color-text-primary); }
 .catnav .mega-actions a.btn-primary { background: var(--color-primary); }
+
+/* below-the-fold sections skip layout and paint until they are near the viewport */
+.rail, .site-footer { content-visibility: auto; contain-intrinsic-size: auto 420px; }

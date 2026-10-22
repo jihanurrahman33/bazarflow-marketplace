@@ -18,7 +18,7 @@ export function ProductRail({ title, subtitle, href, items }: { title: string; s
       <div className="rail-wrap">
         <button type="button" className="rail-btn rail-prev" aria-label={`Scroll ${title} left`} onClick={() => scroll(-1)}><IconChevronLeft /></button>
         <div className="rail-track" ref={track} tabIndex={0} role="group" aria-label={`${title} products`}>
-          {items.map((p, i) => <div key={p.id} className="rail-item"><ProductCard p={p} priority={i < 2} /></div>)}
+          {items.map((p) => <div key={p.id} className="rail-item"><ProductCard p={p} /></div>)}
         </div>
         <button type="button" className="rail-btn rail-next" aria-label={`Scroll ${title} right`} onClick={() => scroll(1)}><IconChevronRight /></button>
       </div>

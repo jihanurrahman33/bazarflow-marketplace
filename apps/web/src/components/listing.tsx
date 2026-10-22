@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getCategories, getProducts } from "@/lib/server-data";
 import type { ProductSort } from "@/server/modules/catalog/public";
 import { IconFilter } from "./icons";
+import { InfiniteProducts } from "./infinite-products";
 import { ProductCard } from "./product-card";
 import { EmptyState } from "./ui";
 
@@ -44,6 +45,11 @@ export async function Listing({ base, params, heading }: { base: string; params:
     }),
     getCategories(),
   ]);
+  const apiQuery = new URLSearchParams(Object.entries({
+    q: params.q && params.q.length >= 2 ? params.q : undefined, category: params.category ?? (base.startsWith("/category/") ? base.slice("/category/".length) : undefined),
+    vendor: params.vendor ?? (base.startsWith("/vendors/") ? base.slice("/vendors/".length) : undefined), sort, limit: "24",
+    minPrice: asInt(params.minPrice)?.toString(), maxPrice: asInt(params.maxPrice)?.toString(),
+  }).filter((e): e is [string, string] => !!e[1])).toString();
   const activeCategory = base.startsWith("/category/") ? base.slice("/category/".length) : params.category;
   const chips = [
     params.q && { label: `“${params.q}”`, to: href(base, params, { q: undefined, cursor: undefined }) },
@@ -115,8 +121,9 @@ export async function Listing({ base, params, heading }: { base: string; params:
             <div className="grid grid-products">{result.value.items.map((p, i) => <ProductCard key={p.id} p={p} priority={i < 4} />)}</div>
             <nav className="row-between" aria-label="Pagination">
               {params.cursor ? <Link href={href(base, params, { cursor: undefined })} className="btn">← First page</Link> : <span />}
-              {result.value.nextCursor ? <Link href={href(base, params, { cursor: result.value.nextCursor })} className="btn btn-primary" rel="next">Next page →</Link> : <span />}
+              {result.value.nextCursor ? <noscript><Link href={href(base, params, { cursor: result.value.nextCursor })} className="btn btn-primary" rel="next">Next page →</Link></noscript> : <span />}
             </nav>
+            {result.value.nextCursor && <InfiniteProducts query={apiQuery} initialCursor={result.value.nextCursor} />}
           </>
         )}
       </div>

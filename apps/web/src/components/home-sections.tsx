@@ -5,6 +5,7 @@ import { CATEGORY_BANNER, siteImage } from "@/lib/site";
 import { HeroCarousel, type Slide } from "./hero";
 import { IconChevronRight, IconReturn, IconShield, IconTruck, IconHeadset } from "./icons";
 import { ProductCard, ProductCardSkeleton } from "./product-card";
+import { LazyRails } from "./lazy-rails";
 import { ProductRail, RailSkeleton } from "./product-rail";
 import { SmartImage } from "./smart-image";
 
@@ -62,6 +63,13 @@ export async function CategoryRail({ slug }: { slug: string }) {
   if (!r.ok) return null;
   const name = cats.ok ? cats.value.find((c) => c.slug === slug)?.name ?? slug : slug;
   return <ProductRail title={name} href={`/category/${slug}`} items={r.value.items} />;
+}
+
+/** Everything after the first `skip` categories: loaded client-side as the shopper scrolls, so a long category list costs nothing up front. */
+export async function MoreCategoryRails({ skip = 3 }: { skip?: number }) {
+  const cats = await getCategories();
+  if (!cats.ok || cats.value.length <= skip) return null;
+  return <LazyRails categories={cats.value.slice(skip).map((c) => ({ slug: c.slug, name: c.name }))} />;
 }
 
 export async function CategoryRails({ limit = 3 }: { limit?: number }) {
