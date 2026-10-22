@@ -39,7 +39,7 @@ export interface Ctx<P> {
   requestId: string;
   ip: string;
   params: P;
-  /** Present when the route requires auth (default). */
+  /** Present when the route requires auth (default). Undefined on public routes and for anonymous callers of optional ones. */
   actor: Actor;
   /** True when the credential came from a cookie (web), false for bearer tokens (mobile). */
   cookieAuth: boolean;
@@ -52,8 +52,11 @@ export interface Ctx<P> {
 
 export interface RouteOptions {
   name: string;
-  /** Default true. Public routes (login, catalog) pass false; actor is then undefined at runtime. */
-  auth?: boolean;
+  /**
+   * Default true. Public routes (login, catalog) pass false; actor is then undefined at runtime.
+   * "optional": anonymous callers are fine, but credentials that ARE sent must be valid; `ctx.actor` may be undefined.
+   */
+  auth?: boolean | "optional";
   rateLimit?: { rule: RateLimitRule; by: "ip" | "actor" };
   maxBodyBytes?: number;
 }
@@ -169,7 +172,8 @@ export function route<P extends Record<string, string> = Record<string, string>>
     try {
       let actor: Actor | undefined;
       let cookieAuth = false;
-      if (opts.auth !== false) {
+      const hasCredentials = req.headers.has("authorization") || !!readCookie(req, ACCESS_COOKIE);
+      if (opts.auth === undefined || opts.auth === true || (opts.auth === "optional" && hasCredentials)) {
         ({ actor, cookieAuth } = await authenticate(req));
         actorId = actor.userId.toHexString();
       }

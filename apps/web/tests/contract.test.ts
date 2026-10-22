@@ -13,7 +13,9 @@ import { buildContract } from "../scripts/gen-openapi";
  */
 const routesDir = path.resolve(import.meta.dirname, "../src/app/api");
 type Handler = (req: Request, ctx: { params: Promise<Record<string, string>> }) => Promise<Response>;
-interface Entry { path: string; method: string; handler: Handler; meta: { name: string; auth?: boolean }; permission?: string; roles?: string[] }
+const isProtected = (e: { meta: { auth?: boolean | "optional" } }) => e.meta.auth !== false && e.meta.auth !== "optional";
+
+interface Entry { path: string; method: string; handler: Handler; meta: { name: string; auth?: boolean | "optional" }; permission?: string; roles?: string[] }
 
 function walk(dir: string): string[] {
   return readdirSync(dir).flatMap((f) => {
@@ -78,7 +80,7 @@ describe("API contract", () => {
 
 describe("every protected endpoint", () => {
   it("rejects unauthenticated requests with 401", async () => {
-    const protectedEntries = entries.filter((e) => e.meta.auth !== false);
+    const protectedEntries = entries.filter(isProtected);
     expect(protectedEntries.length).toBeGreaterThan(80);
     for (const e of protectedEntries) {
       const r = await hit(e);
@@ -88,13 +90,13 @@ describe("every protected endpoint", () => {
   });
 
   it("rejects a garbage bearer token", async () => {
-    for (const e of entries.filter((x) => x.meta.auth !== false)) {
+    for (const e of entries.filter((x) => x.meta.auth !== false)) { // optional-auth routes must also reject bad credentials
       expect((await hit(e, {}, "not.a.token")).status, `${e.method} ${e.path}`).toBe(401);
     }
   });
 
   it("refuses state-changing cookie-authenticated requests that do not come from our origin (CSRF)", async () => {
-    for (const e of entries.filter((x) => x.meta.auth !== false && x.method !== "GET")) {
+    for (const e of entries.filter((x) => isProtected(x) && x.method !== "GET")) {
       const r = await hit(e, { cookie: "bf_at=whatever", origin: "https://evil.example" });
       expect(r.status, `${e.method} ${e.path}`).toBe(403);
       expect(r.error?.code).toBe("ORIGIN_NOT_ALLOWED");
@@ -132,7 +134,7 @@ describe("every protected endpoint", () => {
 
 describe("public endpoints", () => {
   it("never require credentials and always answer with the error envelope on failure", async () => {
-    const open = entries.filter((e) => e.meta.auth === false);
+    const open = entries.filter((e) => !isProtected(e));
     expect(open.length).toBeGreaterThan(10);
     for (const e of open) {
       const r = await hit(e);
@@ -144,7 +146,7 @@ describe("public endpoints", () => {
   });
 
   it("sends private no-store on everything that is not an explicit public cache", async () => {
-    for (const e of entries.filter((x) => x.meta.auth !== false)) {
+    for (const e of entries.filter(isProtected)) {
       const r = await hit(e);
       expect(r.headers.get("cache-control"), `${e.method} ${e.path}`).toBe("no-store");
     }

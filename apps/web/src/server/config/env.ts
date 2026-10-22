@@ -35,6 +35,15 @@ const schema = z
     PAYOUT_HOLD_DAYS: z.coerce.number().int().min(0).max(90).default(7),
     /** Serves the fake hosted-payment page. Always off in production unless explicitly enabled for a demo environment. */
     MOCK_PAYMENT_UI: z.enum(["true", "false"]).default("false").transform((v) => v === "true"),
+    /** Feature flag: the help assistant is off until explicitly enabled. */
+    AI_ASSISTANT_ENABLED: z.enum(["true", "false"]).default("false").transform((v) => v === "true"),
+    /** "none" = retrieval-only answers extracted from approved content (no model involved). */
+    AI_PROVIDER: z.enum(["none", "anthropic"]).default("none"),
+    ANTHROPIC_API_KEY: z.string().optional(),
+    AI_MODEL: z.string().min(1).default("claude-haiku-5-5"),
+    SUPPORT_CONTACT: z.string().min(3).default("support@bazarflow.example"),
+    /** Raw questions are NOT logged unless a documented purpose/consent/retention plan exists. */
+    SUPPORT_LOG_QUESTIONS: z.enum(["true", "false"]).default("false").transform((v) => v === "true"),
     COD_ENABLED: z.enum(["true", "false"]).default("false").transform((v) => v === "true"),
   })
   .superRefine((env, ctx) => {
@@ -43,6 +52,9 @@ const schema = z
     }
     if (env.PAYMENT_PROVIDER === "mock" && env.NODE_ENV === "production" && env.PAYMENT_MODE !== "sandbox") {
       ctx.addIssue({ code: "custom", path: ["PAYMENT_MODE"], message: "mock provider requires sandbox mode" });
+    }
+    if (env.AI_PROVIDER === "anthropic" && !env.ANTHROPIC_API_KEY) {
+      ctx.addIssue({ code: "custom", path: ["ANTHROPIC_API_KEY"], message: "required when AI_PROVIDER=anthropic" });
     }
     if (env.PAYMENT_PROVIDER === "sslcommerz" && (!env.SSLCOMMERZ_STORE_ID || !env.SSLCOMMERZ_STORE_PASSWORD)) {
       ctx.addIssue({ code: "custom", path: ["SSLCOMMERZ_STORE_ID"], message: "SSLCOMMERZ credentials required" });

@@ -19,7 +19,7 @@ function walk(dir: string): string[] {
 
 interface Meta {
   name: string;
-  auth?: boolean;
+  auth?: boolean | "optional";
   rateLimit?: { rule: { limit: number; windowSeconds: number }; by: string };
   maxBodyBytes?: number;
 }
@@ -50,7 +50,8 @@ export async function buildContract() {
       const params = [...apiPath.matchAll(/\{([^}]+)\}/g)].map((x) => ({ name: x[1], in: "path", required: true, schema: { type: "string" } }));
       (paths[apiPath] ??= {})[method.toLowerCase()] = {
         operationId: meta.name,
-        security: meta.auth === false ? [] : [{ bearerAuth: [] }, { cookieAuth: [] }],
+        // [{}] = anonymous allowed; "optional" additionally accepts credentials.
+        security: meta.auth === false ? [] : meta.auth === "optional" ? [{}, { bearerAuth: [] }, { cookieAuth: [] }] : [{ bearerAuth: [] }, { cookieAuth: [] }],
         parameters: [...params, ...(idempotent ? [{ $ref: "#/components/parameters/IdempotencyKey" }] : [])],
         ...(permission ? { "x-required-permission": permission } : {}),
         ...(roles ? { "x-required-role": roles } : vendor ? { "x-required-role": ["vendor"] } : {}),
