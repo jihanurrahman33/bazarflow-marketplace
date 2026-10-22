@@ -100,11 +100,17 @@ export async function trendingProducts(limit: number) {
   return cardsInStock(pick(rows, score, limit * 2), limit);
 }
 
-/** Best-reviewed products (smoothed average, with a minimum number of reviews). Empty until enough reviews exist. */
+/**
+ * Best-reviewed products: smoothed average, so a single review cannot top the list. Wants 3+ reviews per product; while the
+ * catalogue is young and fewer than MIN_ROW products qualify, 2+ reviews is accepted (the count stays visible on each card).
+ */
+const MIN_ROW = 4;
 export async function topRatedProducts(limit: number, minReviews = 3) {
   const c = await getCollections();
   const { byId } = await popularity();
-  const ranked = [...byId.entries()].filter(([, p]) => p.reviews >= minReviews).sort((a, b) => b[1].bayes - a[1].bayes || b[1].reviews - a[1].reviews).slice(0, 80);
+  const rank = (min: number) => [...byId.entries()].filter(([, p]) => p.reviews >= min).sort((a, b) => b[1].bayes - a[1].bayes || b[1].reviews - a[1].reviews).slice(0, 80);
+  let ranked = rank(minReviews);
+  if (ranked.length < MIN_ROW && minReviews > 2) ranked = rank(2);
   if (ranked.length === 0) return [];
   const rows = await c.products.find({ ...sellable, _id: { $in: ranked.map(([id]) => new ObjectId(id)) } }).toArray();
   const bayes = (p: ProductDoc) => byId.get(p._id.toHexString())?.bayes ?? 0;
