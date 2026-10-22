@@ -9,6 +9,8 @@
     "typecheck": "npm run typecheck -w @bazarflow/web",
     "lint": "npm run lint -w @bazarflow/web",
     "test": "npm run test -w @bazarflow/web",
+    "contract": "npm run contract -w @bazarflow/web",
+    "smoke": "npm run smoke -w @bazarflow/web",
     "check": "npm run typecheck && npm run lint && npm run test"
   },
   "engines": { "node": ">=20" }
