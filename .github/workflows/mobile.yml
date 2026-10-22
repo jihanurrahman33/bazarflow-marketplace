@@ -1,0 +1,40 @@
+name: mobile
+on:
+  pull_request:
+    paths: ["apps/mobile-*/**", "mobile_packages/**", "packages/design-tokens/**", ".github/workflows/mobile.yml"]
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project:
+          - mobile_packages/app_core
+          - mobile_packages/design_system
+          - mobile_packages/observability
+          - apps/mobile-customer
+          - apps/mobile-vendor
+          - apps/mobile-admin
+    defaults:
+      run:
+        working-directory: ${{ matrix.project }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with: { channel: stable, cache: true }
+      - run: flutter pub get
+      - run: flutter analyze --fatal-infos
+      - run: flutter test
+  tokens-in-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: node packages/design-tokens/build.mjs
+      - name: Generated token files must be committed
+        run: git diff --exit-code
