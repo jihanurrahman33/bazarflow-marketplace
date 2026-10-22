@@ -83,7 +83,7 @@ export function HeaderSearch({ categories }: { categories: { slug: string; name:
               <div className="hsearch-label">Recent searches</div>
               {recent.map((r) => <button key={r} type="button" role="option" aria-selected="false" className="hsearch-row" onClick={() => go(`/search?q=${encodeURIComponent(r)}`, r)}><IconSearch width={16} height={16} />{r}</button>)}
               {categories.length > 0 && <div className="hsearch-label">Browse</div>}
-              <div className="hsearch-chips">{categories.map((c) => <Link key={c.slug} href={`/category/${c.slug}`} className="chip">{c.name}</Link>)}</div>
+              <div className="hsearch-chips">{categories.slice(0, 8).map((c) => <Link key={c.slug} href={`/category/${c.slug}`} className="chip">{c.name}</Link>)}</div>
             </>
           ) : (
             <>

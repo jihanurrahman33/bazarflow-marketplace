@@ -10,7 +10,8 @@ export function SiteFooter({ categories }: { categories: NavCategory[] }) {
           <p>Independent sellers, one checkout.</p>
         </div>
         <nav aria-label="Shop"><h2>Shop</h2><ul>
-          {categories.slice(0, 8).map((c) => <li key={c.id}><Link href={`/category/${c.slug}`}>{c.name}</Link></li>)}
+          {categories.slice(0, 6).map((c) => <li key={c.id}><Link href={`/category/${c.slug}`}>{c.name}</Link></li>)}
+          <li><Link href="/categories">All categories</Link></li>
           <li><Link href="/search?sort=newest">New in</Link></li>
         </ul></nav>
         <nav aria-label="Sell"><h2>Sell</h2><ul>

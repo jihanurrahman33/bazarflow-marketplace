@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { getCategories, getProducts, getStores } from "@/lib/server-data";
 import { CATEGORY_BANNER, siteImage } from "@/lib/site";
 import { HeroCarousel, type Slide } from "./hero";
-import { IconChevronRight, IconReturn, IconShield, IconTruck, IconHeadset } from "./icons";
+import { IconChevronRight, IconGrid, IconReturn, IconShield, IconTruck, IconHeadset } from "./icons";
 import { ProductCard, ProductCardSkeleton } from "./product-card";
 import { LazyRails } from "./lazy-rails";
 import { ProductRail, RailSkeleton } from "./product-rail";
@@ -31,10 +31,15 @@ export function ValueStrip() {
   return <ul className="value-strip" aria-label="Why shop here">{items.map((i) => <li key={i.label}>{i.icon}{i.label}</li>)}</ul>;
 }
 
-/** Round category tile: the curated banner if there is one, otherwise the newest product's photo in that category. */
-async function CategoryChip({ slug, name }: { slug: string; name: string }) {
+/** Cover photo for a category: the curated banner if there is one, otherwise the newest product's photo. Undefined when the category is empty. */
+export async function categoryImage(slug: string): Promise<string | undefined> {
   const banner = CATEGORY_BANNER[slug];
-  const image = banner ? siteImage(banner, { w: 240, h: 240 }) : await firstImage(slug);
+  if (banner) return siteImage(banner, { w: 240, h: 240 });
+  const r = await getProducts({ sort: "newest", limit: 1, category: slug });
+  return r.ok ? r.value.items[0]?.image : undefined;
+}
+
+export function CategoryChip({ slug, name, image }: { slug: string; name: string; image?: string }) {
   return (
     <Link href={`/category/${slug}`} className="cat-chip">
       <span className="cat-chip-img"><SmartImage src={image} alt="" width={120} height={120} /></span>
@@ -43,12 +48,23 @@ async function CategoryChip({ slug, name }: { slug: string; name: string }) {
   );
 }
 
+const STRIP_MAX = 12;
+
 export async function CategoryStrip() {
   const cats = await getCategories();
   if (!cats.ok || cats.value.length === 0) return null;
+  const withImages = await Promise.all(cats.value.map(async (c) => ({ c, image: await categoryImage(c.slug) })));
+  const shown = withImages.filter((x) => x.image).slice(0, STRIP_MAX);
+  if (shown.length === 0) return null;
   return (
     <nav className="cat-strip" aria-label="Shop by category">
-      {cats.value.map((c) => <CategoryChip key={c.id} slug={c.slug} name={c.name} />)}
+      {shown.map(({ c, image }) => <CategoryChip key={c.id} slug={c.slug} name={c.name} image={image} />)}
+      {cats.value.length > shown.length && (
+        <Link href="/categories" className="cat-chip">
+          <span className="cat-chip-img cat-chip-all"><IconGrid width={28} height={28} /></span>
+          <span>All categories</span>
+        </Link>
+      )}
     </nav>
   );
 }
@@ -87,7 +103,7 @@ export async function StoresStrip() {
   if (!s.ok || s.value.length === 0) return null;
   return (
     <section id="stores" aria-labelledby="stores-h">
-      <header className="section-head"><div><h2 id="stores-h">Stores</h2></div></header>
+      <header className="section-head"><div><h2 id="stores-h">Stores</h2></div><Link href="/vendors" className="see-all">All stores <IconChevronRight width={16} height={16} /></Link></header>
       <div className="store-row">
         {s.value.map((v) => (
           <Link key={v.id} href={`/vendors/${v.slug}`} className="store-chip">
@@ -125,7 +141,3 @@ export function SellerBanner() {
   );
 }
 
-async function firstImage(slug: string): Promise<string | undefined> {
-  const r = await getProducts({ sort: "newest", limit: 1, category: slug });
-  return r.ok ? r.value.items[0]?.image : undefined;
-}

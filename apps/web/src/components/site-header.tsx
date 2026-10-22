@@ -134,7 +134,8 @@ export function SiteHeader({ categories }: { categories: NavCategory[] }) {
             {user ? <p className="muted">Signed in as <strong>{user.name}</strong></p> : <div className="row"><Link href={signIn} className="btn btn-primary">Sign in</Link><Link href="/register" className="btn">Create account</Link></div>}
             <h2 className="drawer-h">Shop by category</h2>
             <ul className="drawer-list">
-              {categories.map((c) => <li key={c.id}><Link href={`/category/${c.slug}`}>{c.name}</Link></li>)}
+              {categories.slice(0, 8).map((c) => <li key={c.id}><Link href={`/category/${c.slug}`}>{c.name}</Link></li>)}
+              <li><Link href="/categories"><strong>{categories.length > 8 ? `All ${categories.length} categories` : "All categories"}</strong></Link></li>
               <li><Link href="/search?sort=newest">New arrivals</Link></li>
             </ul>
             <h2 className="drawer-h">More</h2>

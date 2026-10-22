@@ -56,6 +56,11 @@ export async function Listing({ base, params, heading }: { base: string; params:
     (params.minPrice || params.maxPrice) && { label: `৳${params.minPrice || 0} – ${params.maxPrice ? `৳${params.maxPrice}` : "any"}`, to: href(base, params, { minPrice: undefined, maxPrice: undefined, cursor: undefined }) },
   ].filter(Boolean) as { label: string; to: string }[];
 
+  // Long lists collapse to the first few plus the one being viewed, so the filter column stays short.
+  const FILTER_MAX = 8;
+  const allCats = cats.ok ? cats.value : [];
+  const visibleCats = allCats.filter((c, i) => i < FILTER_MAX || c.slug === activeCategory || c.children.some((x) => x.slug === activeCategory));
+  const hiddenCount = allCats.length - visibleCats.length;
   const filters = (
     <div className="stack">
       {cats.ok && cats.value.length > 0 && (
@@ -63,7 +68,7 @@ export async function Listing({ base, params, heading }: { base: string; params:
           <h2>Categories</h2>
           <ul className="filter-list">
             <li><Link href={href("/search", { ...params, category: undefined, cursor: undefined }, {})} aria-current={!activeCategory ? "true" : undefined}>All products</Link></li>
-            {cats.value.map((c) => (
+            {visibleCats.map((c) => (
               <li key={c.id}>
                 <Link href={`/category/${c.slug}`} aria-current={activeCategory === c.slug ? "true" : undefined}>{c.name}</Link>
                 {c.children.length > 0 && activeCategory && (activeCategory === c.slug || c.children.some((x) => x.slug === activeCategory)) && (
@@ -72,6 +77,7 @@ export async function Listing({ base, params, heading }: { base: string; params:
               </li>
             ))}
           </ul>
+          {hiddenCount > 0 && <Link href="/categories" className="filter-more">Show all {cats.value.length} categories</Link>}
         </nav>
       )}
       <form method="get" action={base} className="filter-block" aria-label="Price filter">
@@ -113,8 +119,8 @@ export async function Listing({ base, params, heading }: { base: string; params:
         {!result.ok ? (
           <div className="alert alert-danger" role="alert">We couldn&apos;t load products right now. Please try again in a moment.</div>
         ) : result.value.items.length === 0 ? (
-          <EmptyState title={params.q ? `No results for “${params.q}”` : heading ? `Nothing in ${heading} yet` : "No products yet"} action={<Link href="/" className="btn btn-primary">Back to home</Link>}>
-            Try a different search or remove some filters.
+          <EmptyState title={params.q ? `No results for “${params.q}”` : heading ? `Nothing in ${heading} yet` : "No products yet"} action={<Link href={params.q || chips.length ? "/" : "/categories"} className="btn btn-primary">{params.q || chips.length ? "Back to home" : "Browse categories"}</Link>}>
+            {params.q || chips.length ? "Try a different search or remove some filters." : "New products land here as sellers publish them. Browse other categories in the meantime."}
           </EmptyState>
         ) : (
           <>

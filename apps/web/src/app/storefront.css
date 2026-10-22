@@ -460,3 +460,18 @@ main a:not(.btn):not(.pcard):not(.chip):not(.cat-chip):not(.store-chip):not(.see
 
 /* below-the-fold sections skip layout and paint until they are near the viewport */
 .rail, .site-footer { content-visibility: auto; contain-intrinsic-size: auto 420px; }
+
+/* many categories: scrollable mega list, compact filter list, all-categories grid */
+.mega-panel { max-height: min(460px, calc(100vh - 150px)); }
+.mega-list { overflow-y: auto; overscroll-behavior: contain; max-height: inherit; scrollbar-width: thin; }
+.mega-detail { overflow-y: auto; }
+.filter-more { display: inline-block; margin-top: 8px; font-size: 14px; font-weight: 600; }
+.cat-chip-all { display: grid; place-items: center; color: var(--color-text-secondary); }
+.cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 28px 16px; }
+.cat-grid .cat-chip { min-width: 0; text-align: center; }
+.cat-grid .cat-chip-img { width: 96px; height: 96px; }
+.store-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.store-card { display: flex; align-items: center; gap: 14px; padding: 14px; border: 1px solid var(--color-border); border-radius: 14px; background: var(--color-surface); color: var(--color-text-primary); transition: border-color 0.15s; }
+.store-card:hover { text-decoration: none; border-color: var(--color-text-primary); }
+.store-card-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.store-card-text .muted { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
