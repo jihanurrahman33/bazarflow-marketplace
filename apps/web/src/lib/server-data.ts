@@ -2,7 +2,9 @@ import "server-only";
 import { listCategoryTree } from "@/server/modules/catalog/categories";
 import { getPublicProduct, listPublicProducts, type ListProductsQuery } from "@/server/modules/catalog/public";
 import { getPublicVendorBySlug, listVendors } from "@/server/modules/vendors/service";
-import { listProductReviews } from "@/server/modules/reviews/service";
+import { ObjectId } from "mongodb";
+import { listProductReviews, listVendorReviews } from "@/server/modules/reviews/service";
+import { vendorTrust } from "@/server/modules/vendors/trust";
 import { isAppError } from "@/server/shared/errors";
 import { logger } from "@/server/shared/logger";
 
@@ -23,5 +25,7 @@ export const getCategories = () => load("categories", () => listCategoryTree());
 export const getProducts = (q: ListProductsQuery) => load("products", () => listPublicProducts(q));
 export const getProduct = (slug: string) => load("product", () => getPublicProduct(slug));
 export const getVendor = (slug: string) => load("vendor", () => getPublicVendorBySlug(slug));
+export const getVendorTrust = (slug: string) => load("vendor-trust", () => vendorTrust(slug));
+export const getVendorReviews = (slug: string, limit = 20) => load("vendor-reviews", async () => { const v = await getPublicVendorBySlug(slug); return listVendorReviews(new ObjectId(v.id), limit); });
 export const getReviews = (slug: string) => load("reviews", () => listProductReviews(slug, { limit: 5 }));
 export const getStores = (limit = 12) => load(`stores:${limit}`, async () => (await listVendors({ status: "active", limit })).items.map((v) => ({ id: v.id, slug: v.slug, name: v.name, description: v.description })));

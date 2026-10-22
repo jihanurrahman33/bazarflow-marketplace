@@ -75,3 +75,29 @@ export async function setReviewStatus(admin: Actor, reviewId: ObjectId, status: 
   if (p) await invalidateCatalog(p.slug);
   return toDto(r);
 }
+
+/** Rating summary across every published review of a store's products. */
+export async function ratingSummaryForVendor(vendorId: ObjectId) {
+  const c = await getCollections();
+  const agg = await c.reviews.aggregate<{ _id: number; n: number }>([{ $match: { vendorId, status: "published" } }, { $group: { _id: "$rating", n: { $sum: 1 } } }]).toArray();
+  const count = agg.reduce((a, r) => a + r.n, 0);
+  const total = agg.reduce((a, r) => a + r._id * r.n, 0);
+  const positive = agg.filter((r) => r._id >= 4).reduce((a, r) => a + r.n, 0);
+  return {
+    count, average: count ? Math.round((total / count) * 10) / 10 : null, positivePercent: count ? Math.round((positive / count) * 100) : null,
+    distribution: Object.fromEntries([1, 2, 3, 4, 5].map((s) => [s, agg.find((r) => r._id === s)?.n ?? 0])) as Record<string, number>,
+  };
+}
+
+/** Latest reviews across a store's products, each with the product it is about. Reviewer names are first name + initial only. */
+export async function listVendorReviews(vendorId: ObjectId, limit: number) {
+  const c = await getCollections();
+  const rows = await c.reviews.find({ vendorId, status: "published" }).sort({ _id: -1 }).limit(limit).toArray();
+  const [users, prods] = await Promise.all([
+    c.users.find({ _id: { $in: rows.map((r) => r.userId) } }, { projection: { name: 1 } }).toArray(),
+    c.products.find({ _id: { $in: rows.map((r) => r.productId) } }, { projection: { title: 1, slug: 1 } }).toArray(),
+  ]);
+  const nameOf = new Map(users.map((u) => [u._id.toHexString(), u.name.split(" ").map((p, i) => (i === 0 ? p : `${p[0]}.`)).join(" ")]));
+  const prodOf = new Map(prods.map((p) => [p._id.toHexString(), p]));
+  return rows.map((r) => ({ ...toDto(r, nameOf.get(r.userId.toHexString())), product: { title: prodOf.get(r.productId.toHexString())?.title ?? "Product", slug: prodOf.get(r.productId.toHexString())?.slug } }));
+}

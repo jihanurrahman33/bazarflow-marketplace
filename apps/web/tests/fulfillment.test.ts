@@ -1,4 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { vendorTrust } from "@/server/modules/vendors/trust";
+import { listVendorReviews } from "@/server/modules/reviews/service";
 import { ObjectId } from "mongodb";
 import { setupTestDb, teardownTestDb } from "./helpers/db";
 import { call } from "./helpers/http";
@@ -290,6 +292,15 @@ describe("reviews", () => {
     expect(created.status).toBe(201);
     expect((await review(o.buyer.token, good)).error?.code).toBe("CONFLICT");
     expect((await eligible(o.buyer.token)).data).toEqual({ canReview: false, reason: "already_reviewed" });
+
+    // store trust figures come from the real orders and reviews, and small samples are left out rather than guessed
+    const cc = await getCollections();
+    const vendorSlug = (await cc.vendors.findOne({ _id: o.vendors[0]!.vendorId }))!.slug;
+    const trust = await vendorTrust(vendorSlug);
+    expect(trust).toMatchObject({ completedOrders: 1, productCount: expect.any(Number), returnRatePercent: null, typicalShipDays: null });
+    expect(trust.rating).toMatchObject({ count: 1, average: 5, positivePercent: 100 });
+    expect(trust.rating.distribution).toMatchObject({ 5: 1, 1: 0 });
+    expect((await listVendorReviews(o.vendors[0]!.vendorId, 10))[0]).toMatchObject({ rating: 5, product: { slug } });
 
     const list = await call(listReviewsHandler, { params: { slug } });
     expect(list.data).toHaveLength(1);
