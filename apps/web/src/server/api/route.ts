@@ -160,8 +160,8 @@ type NextCtx<P> = { params: Promise<P> };
 export function route<P extends Record<string, string> = Record<string, string>>(
   opts: RouteOptions,
   handler: (ctx: Ctx<P>) => Promise<Reply>,
-): (req: Request, nextCtx: NextCtx<P>) => Promise<Response> {
-  return async (req, nextCtx) => {
+): ((req: Request, nextCtx: NextCtx<P>) => Promise<Response>) & { meta: RouteOptions } {
+  const handle = async (req: Request, nextCtx: NextCtx<P>): Promise<Response> => {
     const started = Date.now();
     const requestId = req.headers.get("x-request-id")?.slice(0, 64) || randomUUID();
     const ip = clientIp(req);
@@ -221,4 +221,6 @@ export function route<P extends Record<string, string> = Record<string, string>>
       return errorResponse(e, requestId);
     }
   };
+  // Route metadata powers the generated API contract (see scripts/gen-openapi.ts).
+  return Object.assign(handle, { meta: opts });
 }

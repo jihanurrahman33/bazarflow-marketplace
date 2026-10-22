@@ -31,6 +31,7 @@ export const acceptOrderHandler = route<{ id: string }>({ name: "vendor.orders.a
 );
 
 export const shipOrderHandler = route<{ id: string }>({ name: "vendor.orders.ship" }, async (ctx) => {
+  vendorScope(ctx); // authorize before parsing the body
   const b = await ctx.body(z.strictObject({ carrier: z.string().trim().min(2).max(60), trackingNumber: z.string().trim().min(3).max(60).regex(/^[0-9A-Za-z\-_/ ]+$/) }));
   return respond(transitionVendorOrder(vendorScope(ctx), parseObjectId(ctx.params.id), { to: "shipped", shipment: b }, ctx.requestId));
 });
@@ -41,6 +42,7 @@ export const deliverOrderHandler = route<{ id: string }>({ name: "vendor.orders.
 
 /** Reject while `new`, or cancel after accepting (e.g. out of stock). Online payments are refunded automatically. */
 export const cancelOrderVendorHandler = route<{ id: string }>({ name: "vendor.orders.cancel" }, async (ctx) => {
+  vendorScope(ctx); // authorize before parsing the body
   const b = await ctx.body(note);
   return respond(transitionVendorOrder(vendorScope(ctx), parseObjectId(ctx.params.id), { to: "cancelled", note: b.reason }, ctx.requestId));
 });
@@ -51,6 +53,7 @@ export const approveReturnHandler = route<{ id: string }>({ name: "vendor.orders
 });
 
 export const rejectReturnHandler = route<{ id: string }>({ name: "vendor.orders.return.reject" }, async (ctx) => {
+  vendorScope(ctx); // authorize before parsing the body
   const b = await ctx.body(note);
   return ok(toVendorOrderDto(await rejectReturn(vendorScope(ctx), parseObjectId(ctx.params.id), b.reason, ctx.requestId)));
 });

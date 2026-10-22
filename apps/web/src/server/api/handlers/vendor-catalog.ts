@@ -45,6 +45,7 @@ export const getProductHandler = route<{ id: string }>({ name: "vendor.products.
 );
 
 export const patchProductHandler = route<{ id: string }>({ name: "vendor.products.patch" }, async (ctx) => {
+  vendorOf(ctx); // authorize before parsing the body
   const b = await ctx.body(z.strictObject({
     title: z.string().trim().min(3).max(150).optional(), description: z.string().trim().min(10).max(5000).optional(),
     categoryIds: z.array(objectIdStr).min(1).max(5).optional(), media: mediaInput.optional(),
@@ -61,11 +62,13 @@ export const archiveProductHandler = route<{ id: string }>({ name: "vendor.produ
 );
 
 export const addVariantsHandler = route<{ id: string }>({ name: "vendor.variants.add" }, async (ctx) => {
+  vendorOf(ctx); // authorize before parsing the body
   const b = await ctx.body(z.strictObject({ newOptionValues: z.record(z.string(), z.array(z.string().min(1).max(60)).max(30)).optional(), variants: z.array(variantInput).min(1).max(50) }));
   return created(await addVariants(vendorOf(ctx), parseObjectId(ctx.params.id), b));
 });
 
 export const patchVariantHandler = route<{ id: string; variantId: string }>({ name: "vendor.variants.patch" }, async (ctx) => {
+  vendorOf(ctx); // authorize before parsing the body
   const b = await ctx.body(z.strictObject({ priceMinor: price.optional(), compareAtMinor: price.nullable().optional(), active: z.boolean().optional() }));
   return ok(await updateVariant(vendorOf(ctx), parseObjectId(ctx.params.id), ctx.params.variantId, b));
 });
@@ -83,6 +86,7 @@ export const listInventoryHandler = route({ name: "vendor.inventory.list" }, asy
 });
 
 export const adjustInventoryHandler = route<{ skuId: string }>({ name: "vendor.inventory.adjust" }, async (ctx) => {
+  vendorOf(ctx); // authorize before parsing the body
   const b = await ctx.body(z.strictObject({
     set: z.number().int().min(0).max(1_000_000).optional(), delta: z.number().int().min(-1_000_000).max(1_000_000).optional(),
     reason: z.string().trim().min(3).max(200),
