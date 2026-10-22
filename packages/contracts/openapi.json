@@ -4388,6 +4388,45 @@
         }
       }
     },
+    "/api/v1/vendor/analytics": {
+      "get": {
+        "operationId": "vendor.analytics",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [],
+        "x-required-role": [
+          "vendor"
+        ],
+        "responses": {
+          "2XX": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/vendor/application": {
       "get": {
         "operationId": "vendor.application.get",
@@ -4509,6 +4548,45 @@
     "/api/v1/vendor/balance": {
       "get": {
         "operationId": "vendor.balance",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [],
+        "x-required-role": [
+          "vendor"
+        ],
+        "responses": {
+          "2XX": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/vendor/catalog-export": {
+      "get": {
+        "operationId": "vendor.catalog.export",
         "security": [
           {
             "bearerAuth": []
@@ -5670,6 +5748,50 @@
         "x-required-role": [
           "vendor"
         ],
+        "responses": {
+          "2XX": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/vendor/products/bulk-update": {
+      "post": {
+        "operationId": "vendor.products.bulk",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [],
+        "x-required-role": [
+          "vendor"
+        ],
+        "x-rate-limit": {
+          "limit": 20,
+          "windowSeconds": 3600,
+          "by": "actor"
+        },
         "responses": {
           "2XX": {
             "description": "Success",

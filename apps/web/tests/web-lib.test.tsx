@@ -226,3 +226,23 @@ describe("option presets", () => {
     expect(sortLikePreset("Size", ["XL", "S", "Petite", "M"])).toEqual(["S", "M", "XL", "Petite"]);
   });
 });
+
+describe("bulk update CSV", () => {
+  it("reads sku, price and stock by header name, with quotes, CRLF and a byte-order mark", async () => {
+    const { rowsFromCsv, parseCsv, csvEscape } = await import("@/components/vendor-tools-views");
+    const text = "﻿sku,product,variant,price,stock\r\nABC-1,\"Tee, classic\",Black / M,1250.50,12\r\nABC-2,Cap,,,40\r\nABC-3,Mug,,299,\r\n,ignored,,5,5\r\nABC-4,Skip,,,\r\n";
+    expect(parseCsv(text)[1]).toEqual(["ABC-1", "Tee, classic", "Black / M", "1250.50", "12"]);
+    const { rows, problems } = rowsFromCsv(text);
+    expect(problems).toEqual([]);
+    expect(rows).toEqual([{ sku: "ABC-1", priceMinor: 125050, stock: 12 }, { sku: "ABC-2", stock: 40 }, { sku: "ABC-3", priceMinor: 29900 }]);
+    expect(csvEscape('He said "hi", twice')).toBe('"He said ""hi"", twice"');
+  });
+  it("explains what is wrong instead of guessing", async () => {
+    const { rowsFromCsv } = await import("@/components/vendor-tools-views");
+    expect(rowsFromCsv("name,price\nA,5").problems[0]).toMatch(/sku/);
+    expect(rowsFromCsv("sku,name\nA,x").problems[0]).toMatch(/price column/);
+    const bad = rowsFromCsv("sku,price,stock\nA,abc,1\nB,10,1.5\nC,0,2\nD,10,2");
+    expect(bad.problems).toHaveLength(3);
+    expect(bad.rows).toEqual([{ sku: "D", priceMinor: 1000, stock: 2 }]);
+  });
+});

@@ -79,7 +79,7 @@ export interface ProductSpec {
   priceMinor?: number;
   stock?: number;
   categoryId: string;
-  variants?: { sku: string; optionValues?: Record<string, string>; priceMinor: number; initialStock: number }[];
+  variants?: { sku: string; optionValues?: Record<string, string>; priceMinor: number; compareAtMinor?: number; initialStock: number }[];
   options?: { name: string; values: string[] }[];
   publish?: boolean;
   admin?: { token: string };

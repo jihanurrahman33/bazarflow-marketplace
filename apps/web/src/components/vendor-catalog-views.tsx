@@ -43,7 +43,7 @@ export function ProductList() {
   ];
   return (
     <div className="stack">
-      <PageHeader title="Products"><LinkButton href="/vendor/products/new" variant="primary">New product</LinkButton></PageHeader>
+      <PageHeader title="Products"><LinkButton href="/vendor/products/bulk">Bulk update</LinkButton><LinkButton href="/vendor/products/new" variant="primary">New product</LinkButton></PageHeader>
       <StatusTabs label="Product status" value={status} onChange={setStatus} options={[{ value: "", label: "All" }, ...["draft", "pending_review", "published", "rejected", "archived"].map((s) => ({ value: s, label: s.replace("_", " ") }))]} />
       <ListTable<VProduct> key={status} path={`/vendor/products?limit=20${status ? `&status=${status}` : ""}`} columns={cols} caption="Products" empty="No products yet" searchText={(p) => p.title} />
     </div>

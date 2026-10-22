@@ -10,6 +10,7 @@ export default function VendorLayout({ children }: { children: ReactNode }) {
     <ConsoleShell role="vendor" title="Seller console" nav={[
       { href: "/vendor", label: "Overview", exact: true, icon: <IconChart />, group: "Sell" },
       { href: "/vendor/orders", label: "Orders", icon: <IconReceipt />, group: "Sell" },
+      { href: "/vendor/analytics", label: "Analytics", icon: <IconChart />, group: "Sell" },
       { href: "/vendor/products", label: "Products", icon: <IconTag />, group: "Catalogue" },
       { href: "/vendor/inventory", label: "Inventory", icon: <IconBox />, group: "Catalogue" },
       { href: "/vendor/coupons", label: "Coupons", icon: <IconTag />, group: "Catalogue" },

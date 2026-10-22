@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { vendorSalesAnalytics } from "@/server/modules/vendors/analytics";
+import { bulkUpdate, catalogExport, MAX_BULK_ROWS } from "@/server/modules/vendors/bulk";
 import { createCoupon, listCoupons, updateCoupon } from "@/server/modules/coupons/service";
 import { created, ok, page, route, type Ctx } from "@/server/api/route";
 import { requireVendor } from "@/server/modules/authorization/actor";
@@ -127,4 +129,20 @@ export const patchCouponHandler = route<{ id: string }>({ name: "vendor.coupons.
   const v = vendorOf(ctx);
   const b = await ctx.body(z.strictObject({ active: z.boolean().optional(), expiresAt: z.iso.datetime().nullable().optional(), maxRedemptions: z.number().int().min(1).max(1_000_000).nullable().optional() }));
   return ok(await updateCoupon(v.vendorId, parseObjectId(ctx.params.id), { active: b.active, expiresAt: b.expiresAt === null ? null : b.expiresAt ? new Date(b.expiresAt) : undefined, maxRedemptions: b.maxRedemptions }));
+});
+
+// ----- analytics and bulk edit -----
+export const vendorAnalyticsHandler = route({ name: "vendor.analytics" }, async (ctx) => {
+  const q = ctx.query(z.strictObject({ days: z.coerce.number().int().min(1).max(90).default(30) }));
+  return ok(await vendorSalesAnalytics(vendorOf(ctx).vendorId, q.days));
+});
+
+export const catalogExportHandler = route({ name: "vendor.catalog.export" }, async (ctx) => ok(await catalogExport(vendorOf(ctx).vendorId)));
+
+const bulkRow = z.strictObject({ sku, priceMinor: price.optional(), stock: z.number().int().min(0).max(1_000_000).optional() }).refine((r) => r.priceMinor !== undefined || r.stock !== undefined, { message: "Give a price, a stock level, or both." });
+export const bulkUpdateHandler = route({ name: "vendor.products.bulk", rateLimit: { rule: { name: "vendor.products.bulk", limit: 20, windowSeconds: 3600 }, by: "actor" }, maxBodyBytes: 256 * 1024 }, async (ctx) => {
+  const v = vendorOf(ctx);
+  const b = await ctx.body(z.strictObject({ dryRun: z.boolean().default(false), rows: z.array(bulkRow).min(1).max(MAX_BULK_ROWS) }));
+  const results = await bulkUpdate({ ...ctx.actor, vendorId: v.vendorId }, b.rows, { dryRun: b.dryRun });
+  return ok(results, { dryRun: b.dryRun, updated: results.filter((r) => r.status === "updated").length, errors: results.filter((r) => r.status === "error").length });
 });
