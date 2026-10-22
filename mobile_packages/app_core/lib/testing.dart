@@ -1,8 +1,11 @@
+/// Test doubles for the HTTP layer, shared by every app's test suite (not for production code).
+library;
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:app_core/app_core.dart';
+import 'app_core.dart';
 import 'package:dio/dio.dart';
 
 class RecordedRequest {

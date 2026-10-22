@@ -9,3 +9,4 @@ export 'src/paging.dart';
 export 'src/push.dart';
 export 'src/session.dart';
 export 'src/token_store.dart';
+export 'src/resource_cubit.dart';
