@@ -18,7 +18,7 @@ export function SiteHeader({ categories }: { categories: NavCategory[] }) {
   const megaRef = useRef<HTMLDivElement>(null);
   const [activeCat, setActiveCat] = useState(0);
   const current = categories[activeCat] ?? categories[0];
-  const isConsole = path.startsWith("/admin") || path.startsWith("/vendor");
+  const isConsole = /^\/(admin|vendor)(\/|$)/.test(path);
   const consoleHref = user?.role === "admin" ? "/admin" : user?.role === "vendor" ? "/vendor" : null;
   const shopper = !user || user.role === "customer";
 
