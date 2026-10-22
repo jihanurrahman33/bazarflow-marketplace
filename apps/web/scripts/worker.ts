@@ -1,38 +1,19 @@
 import { loadDotEnv } from "./_env";
 loadDotEnv();
 
-const { processOutbox } = await import("../src/server/modules/outbox/outbox");
-const { outboxHandlers } = await import("../src/server/modules/outbox/handlers");
-const { expireUnpaidOrders } = await import("../src/server/modules/orders/service");
-const { reconcileStuckPayments } = await import("../src/server/modules/payments/service");
-const { retryProcessingRefunds } = await import("../src/server/modules/payments/refunds");
+const { runWorkerTick } = await import("../src/server/modules/outbox/tick");
 const { closeClient } = await import("../src/server/db/client");
 
 const once = process.argv.includes("--once");
-const MAINTENANCE_EVERY_MS = 30_000;
 let stopping = false;
 process.on("SIGINT", () => (stopping = true));
 process.on("SIGTERM", () => (stopping = true));
 
-/** Time-based jobs. Every one is idempotent, so running two workers is safe. */
-async function maintenance() {
-  const cancelled = await expireUnpaidOrders();
-  if (cancelled) console.log(JSON.stringify({ job: "expireUnpaidOrders", cancelled }));
-  const reconciled = await reconcileStuckPayments();
-  if (reconciled) console.log(JSON.stringify({ job: "reconcileStuckPayments", reconciled }));
-  const refunds = await retryProcessingRefunds();
-  if (refunds) console.log(JSON.stringify({ job: "retryProcessingRefunds", refunds }));
-}
-
-let lastMaintenance = 0;
 do {
-  if (Date.now() - lastMaintenance >= MAINTENANCE_EVERY_MS || once) {
-    await maintenance().catch((e) => console.error("maintenance failed", e instanceof Error ? e.name : e));
-    lastMaintenance = Date.now();
-  }
-  const n = await processOutbox(outboxHandlers);
+  const r = await runWorkerTick(25_000).catch((e) => { console.error("tick failed", e instanceof Error ? e.name : e); return null; });
+  if (r && (r.expiredOrders || r.reconciledPayments || r.refundRetries || r.outboxProcessed)) console.log(JSON.stringify({ job: "tick", ...r }));
   if (once) break;
-  if (n === 0) await new Promise((r) => setTimeout(r, 2000));
+  if (!r || r.outboxProcessed === 0) await new Promise((res) => setTimeout(res, 2000));
 } while (!stopping);
 
 await closeClient();

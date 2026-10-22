@@ -54,6 +54,8 @@ const schema = z
     FIREBASE_WEB_APP_ID: z.string().min(3).optional(),
     /** Comma-separated Firebase provider ids to offer. */
     FIREBASE_SIGN_IN_PROVIDERS: z.string().default("google.com,apple.com,facebook.com"),
+    /** Shared secret for the scheduled worker endpoint (/api/internal/worker). Unset = the endpoint does not exist. */
+    CRON_SECRET: z.string().min(24).optional(),
     SMTP_URL: z.string().optional(),
     MAIL_FROM: z.string().min(5).default("BazarFlow <no-reply@bazarflow.example>"),
     /** Firebase service-account JSON (as a string) for server-side push. Unset = push is NOT sent (inbox still works). */

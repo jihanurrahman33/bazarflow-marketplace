@@ -1,0 +1,23 @@
+name: worker-tick
+# Runs the background worker (notifications, order expiry, payment reconciliation) every 5 minutes.
+# Needs repository secrets APP_URL (e.g. https://bazarflow.nishak.tech) and CRON_SECRET (same value as the Vercel env var).
+# Vercel Hobby only allows one cron a day, so this schedule is what keeps the shop moving between those runs.
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+permissions: {}
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    if: ${{ vars.WORKER_TICK_ENABLED != 'false' }}
+    steps:
+      - name: Call the worker endpoint
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          test -n "$APP_URL" && test -n "$CRON_SECRET" || { echo "APP_URL / CRON_SECRET secrets are not set"; exit 1; }
+          code=$(curl -sS -o body.json -w '%{http_code}' -X POST -H "Authorization: Bearer $CRON_SECRET" --max-time 70 "$APP_URL/api/internal/worker")
+          cat body.json; echo
+          test "$code" = "200"
