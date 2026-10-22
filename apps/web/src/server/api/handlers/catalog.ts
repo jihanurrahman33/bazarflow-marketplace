@@ -68,7 +68,7 @@ export const productsHandler = route(
   async (ctx) => {
     const q = ctx.query(productsQuery);
     const r = await listPublicProducts({ ...q, minPriceMinor: q.minPrice, maxPriceMinor: q.maxPrice });
-    return page(r.items, r, { cache: PUBLIC_CACHE });
+    return page(r.items, r, { cache: PUBLIC_CACHE, meta: { nextCursor: r.nextCursor, hasMore: r.nextCursor !== null, ...(r.corrected ? { corrected: r.corrected } : {}) } });
   },
 );
 

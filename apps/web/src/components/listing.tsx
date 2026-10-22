@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getCategories, getProducts } from "@/lib/server-data";
+import { getCategories, getProducts, getSearchFacets } from "@/lib/server-data";
 import type { ProductSort } from "@/server/modules/catalog/public";
 import { IconFilter } from "./icons";
 import { InfiniteProducts } from "./infinite-products";
@@ -39,13 +39,16 @@ const asInt = (v?: string) => (v && /^\d{1,9}$/.test(v) ? Number(v) * 100 : unde
 /** Server-rendered result list with shareable URLs (filters live in the query string; "next" uses the keyset cursor). */
 export async function Listing({ base, params, heading }: { base: string; params: ListingParams; heading?: string }) {
   const sort = (SORTS.some((s) => s.value === params.sort) ? params.sort : params.q ? "relevance" : "newest") as ProductSort;
-  const [result, cats] = await Promise.all([
+  const searching = !!params.q && params.q.length >= 2;
+  const [result, cats, facets] = await Promise.all([
     getProducts({
       q: params.q && params.q.length >= 2 ? params.q : undefined, category: params.category, vendor: params.vendor, sort, limit: 24,
       cursor: params.cursor, minPriceMinor: asInt(params.minPrice), maxPriceMinor: asInt(params.maxPrice),
     }),
     getCategories(),
+    searching ? getSearchFacets(params.q!) : Promise.resolve(undefined),
   ]);
+  const facetList = facets?.ok ? facets.value : null;
   const apiQuery = new URLSearchParams(Object.entries({
     q: params.q && params.q.length >= 2 ? params.q : undefined, category: params.category ?? (base.startsWith("/category/") ? base.slice("/category/".length) : undefined),
     vendor: params.vendor ?? (base.startsWith("/vendors/") ? base.slice("/vendors/".length) : undefined), sort, limit: "24",
@@ -65,7 +68,17 @@ export async function Listing({ base, params, heading }: { base: string; params:
   const hiddenCount = allCats.length - visibleCats.length;
   const filters = (
     <div className="stack">
-      {cats.ok && cats.value.length > 0 && (
+      {searching && facetList && facetList.length > 0 ? (
+        <nav aria-label="Categories" className="filter-block">
+          <h2>Categories</h2>
+          <ul className="filter-list">
+            <li><Link href={href("/search", { ...params, category: undefined, cursor: undefined }, {})} aria-current={!params.category ? "true" : undefined}>All results</Link></li>
+            {facetList.map((f) => (
+              <li key={f.slug}><Link href={href("/search", { ...params, category: f.slug, cursor: undefined }, {})} aria-current={params.category === f.slug ? "true" : undefined}>{f.name} <span className="muted small">({f.count})</span></Link></li>
+            ))}
+          </ul>
+        </nav>
+      ) : cats.ok && cats.value.length > 0 && (
         <nav aria-label="Categories" className="filter-block">
           <h2>Categories</h2>
           <ul className="filter-list">
@@ -118,6 +131,7 @@ export async function Listing({ base, params, heading }: { base: string; params:
           </form>
         </div>
 
+        {result.ok && result.value.corrected && <p className="did-you-mean" role="status">Showing results for <strong>{result.value.corrected.to}</strong>. We found nothing for “{result.value.corrected.from}”.</p>}
         {!result.ok ? (
           <div className="alert alert-danger" role="alert">We couldn&apos;t load products right now. Please try again in a moment.</div>
         ) : result.value.items.length === 0 ? (

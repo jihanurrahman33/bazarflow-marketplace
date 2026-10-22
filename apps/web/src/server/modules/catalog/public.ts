@@ -4,6 +4,7 @@ import type { ProductDoc } from "@/server/db/schema";
 import { AppError } from "@/server/shared/errors";
 import { decodeCursor, encodeCursor, slicePage } from "@/server/shared/pagination";
 import { variantLabel } from "./products";
+import { resolveMatch } from "./search";
 import { getMediaProvider } from "@/server/modules/media/cloudinary";
 
 export type ProductSort = "newest" | "price_asc" | "price_desc" | "relevance";
@@ -46,7 +47,7 @@ function discountOf(p: ProductDoc): { compareAtMinor: number; discountPercent: n
   return { compareAtMinor: cheapest.compareAtMinor, discountPercent: Math.round(((cheapest.compareAtMinor - cheapest.priceMinor) / cheapest.compareAtMinor) * 100) };
 }
 
-export async function listPublicProducts(q: ListProductsQuery) {
+export async function listPublicProducts(q: ListProductsQuery): Promise<{ items: Awaited<ReturnType<typeof toCards>>; nextCursor: string | null; corrected?: { from: string; to: string } }> {
   const c = await getCollections();
   const filter: Filter<ProductDoc> = { status: "published", vendorActive: true };
 
@@ -69,16 +70,17 @@ export async function listPublicProducts(q: ListProductsQuery) {
   let rows: ProductDoc[];
   let nextCursor: string | null = null;
 
+  let corrected: { from: string; to: string } | undefined;
   if (q.q) {
-    // Text search: relevance order with a bounded offset (a keyset cursor over text scores is not stable).
+    // Words (plus synonyms) first, then word prefixes, then a spelling-corrected retry; offset-based paging because text scores are not keyset-stable.
     const offset = Number(decodeCursor<{ o: number }>(q.cursor)?.o ?? 0);
     if (!Number.isInteger(offset) || offset < 0 || offset > MAX_SEARCH_OFFSET) throw new AppError("VALIDATION_FAILED", { details: [{ field: "cursor", code: "INVALID" }] });
-    const found = await c.products
-      .find({ ...filter, $text: { $search: q.q } }, { projection: { score: { $meta: "textScore" } } })
-      .sort({ score: { $meta: "textScore" }, _id: 1 })
-      .skip(offset)
-      .limit(q.limit + 1)
-      .toArray();
+    const match = await resolveMatch(filter, q.q);
+    if (!match) return { items: [], nextCursor: null };
+    corrected = match.corrected;
+    const found = match.text
+      ? await c.products.find(match.filter, { projection: { score: { $meta: "textScore" } } }).sort({ score: { $meta: "textScore" }, _id: 1 }).skip(offset).limit(q.limit + 1).toArray()
+      : await c.products.find(match.filter).sort({ publishedAt: -1, _id: 1 }).skip(offset).limit(q.limit + 1).toArray();
     const { items, hasMore } = slicePage(found, q.limit);
     rows = items;
     if (hasMore && offset + q.limit <= MAX_SEARCH_OFFSET) nextCursor = encodeCursor({ o: offset + q.limit });
@@ -100,7 +102,7 @@ export async function listPublicProducts(q: ListProductsQuery) {
     if (hasMore && last) nextCursor = encodeCursor({ p: value(last), id: last._id.toHexString() });
   }
 
-  return { items: await toCards(rows), nextCursor };
+  return { items: await toCards(rows), nextCursor, ...(corrected ? { corrected } : {}) };
 }
 
 /** Listing-card DTOs for a set of product rows: seller, availability and rating are looked up once for the whole set. */

@@ -544,3 +544,5 @@ td input.mono { min-width: 190px; }
 .dist-btn:disabled { opacity: 0.5; cursor: default; }
 .review-sort { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-self: end; }
 @media (max-width: 700px) { .review-controls { grid-template-columns: 1fr; } .review-sort { justify-self: start; } }
+.did-you-mean { margin: 0; padding: 10px 14px; border-radius: 12px; background: var(--color-surface-container); color: var(--color-text-secondary); }
+.did-you-mean strong { color: var(--color-text-primary); }

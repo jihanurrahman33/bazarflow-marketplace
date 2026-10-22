@@ -4,6 +4,7 @@ import { getPublicProduct, listPublicProducts, type ListProductsQuery } from "@/
 import { getPublicVendorBySlug, listVendors } from "@/server/modules/vendors/service";
 import { ObjectId } from "mongodb";
 import { listProductReviews, listVendorReviews } from "@/server/modules/reviews/service";
+import { searchCategoryFacets } from "@/server/modules/catalog/search";
 import { relatedProducts, topRatedProducts, trendingProducts } from "@/server/modules/catalog/recommend";
 import { vendorTrust } from "@/server/modules/vendors/trust";
 import { isAppError } from "@/server/shared/errors";
@@ -26,6 +27,7 @@ export const getCategories = () => load("categories", () => listCategoryTree());
 export const getProducts = (q: ListProductsQuery) => load("products", () => listPublicProducts(q));
 export const getProduct = (slug: string) => load("product", () => getPublicProduct(slug));
 export const getVendor = (slug: string) => load("vendor", () => getPublicVendorBySlug(slug));
+export const getSearchFacets = (q: string) => load("facets", () => searchCategoryFacets({ status: "published", vendorActive: true }, q));
 export const getTrending = (limit = 12) => load("trending", () => trendingProducts(limit));
 export const getTopRated = (limit = 12) => load("top-rated", () => topRatedProducts(limit));
 export const getRelated = (id: string) => load("related", () => relatedProducts(new ObjectId(id), 12));
