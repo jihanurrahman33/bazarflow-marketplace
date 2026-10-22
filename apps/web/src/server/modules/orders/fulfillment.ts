@@ -12,6 +12,7 @@ import { restock } from "@/server/modules/inventory/service";
 import { postCodCommission, postEntry, releaseSaleEntries } from "@/server/modules/ledger/service";
 import { createVendorOrderRefund, executeRefund } from "@/server/modules/payments/refunds";
 import { requireActiveVendor } from "@/server/modules/vendors/service";
+import { getCourierAdapter } from "@/server/modules/couriers/registry";
 import { logger } from "@/server/shared/logger";
 import { deriveOrderStatus, fulfillmentMachine } from "./state";
 
@@ -202,4 +203,65 @@ export async function approveReturn(scope: Extract<Scope, { kind: "vendor" | "ad
 
 export async function rejectReturn(scope: Extract<Scope, { kind: "vendor" | "admin" }>, vendorOrderId: ObjectId, reason: string, requestId?: string) {
   return transitionVendorOrder(scope, vendorOrderId, { to: "delivered", note: `return rejected: ${reason}` }, requestId);
+}
+
+export async function dispatchWithCourier(
+  scope: Scope,
+  vendorOrderId: ObjectId,
+  input: { carrier?: string; weightGrams?: number } = {},
+  requestId?: string,
+) {
+  const c = await getCollections();
+  const filter: Filter<VendorOrderDoc> = { _id: vendorOrderId };
+  if (scope.kind === "vendor") filter.vendorId = scope.vendorId;
+  const vo = await c.vendorOrders.findOne(filter);
+  if (!vo) throw new AppError("NOT_FOUND");
+  if (vo.fulfillmentStatus !== "accepted" && vo.fulfillmentStatus !== "new") {
+    throw new AppError("INVALID_STATE_TRANSITION", { message: `Cannot dispatch order in ${vo.fulfillmentStatus} status.` });
+  }
+
+  if (vo.fulfillmentStatus === "new") {
+    await transitionVendorOrder(scope, vo._id, { to: "accepted" }, requestId);
+  }
+
+  const parent = await c.orders.findOne({ _id: vo.parentOrderId });
+  if (!parent) throw new AppError("INTERNAL");
+
+  const courier = getCourierAdapter(input.carrier ?? "redx");
+
+  const parcel = await courier.createParcel({
+    orderNumber: vo.publicOrderNumber,
+    recipient: {
+      recipient: vo.shippingAddress.recipient,
+      phone: vo.shippingAddress.phone,
+      line1: vo.shippingAddress.line1,
+      line2: vo.shippingAddress.line2,
+      city: vo.shippingAddress.city,
+      district: vo.shippingAddress.district,
+      postalCode: vo.shippingAddress.postalCode,
+    },
+    items: vo.items.map((i) => ({ title: i.title, quantity: i.quantity })),
+    amountToCollectMinor: parent.paymentMethod === "cod" ? vo.totals.totalMinor : 0,
+    declaredValueMinor: vo.totals.totalMinor,
+    weightGrams: input.weightGrams ?? 500,
+  });
+
+  return transitionVendorOrder(
+    scope,
+    vo._id,
+    {
+      to: "shipped",
+      shipment: {
+        carrier: parcel.carrier,
+        trackingNumber: parcel.trackingId,
+      },
+      note: `Dispatched via ${parcel.carrier} (${parcel.trackingId})`,
+    },
+    requestId,
+  );
+}
+
+export async function getShipmentTracking(carrier: string, trackingNumber: string) {
+  const courier = getCourierAdapter(carrier);
+  return courier.trackParcel(trackingNumber);
 }

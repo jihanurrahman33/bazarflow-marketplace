@@ -5,8 +5,8 @@ import { call } from "./helpers/http";
 import { makeAdmin, makeCustomer, makeUser, installFakeMedia } from "./helpers/factory";
 import { makeShop, placeShopOrder, type Shop } from "./helpers/shop";
 import {
-  acceptOrderHandler, adminCancelVendorOrderHandler, approveReturnHandler, cancelOrderVendorHandler, deliverOrderHandler, rejectReturnHandler,
-  requestReturnHandler, shipOrderHandler, vendorOrderHandler, vendorOrdersHandler,
+  acceptOrderHandler, adminCancelVendorOrderHandler, approveReturnHandler, cancelOrderVendorHandler, deliverOrderHandler, dispatchOrderHandler, rejectReturnHandler,
+  requestReturnHandler, shipOrderHandler, trackShipmentHandler, vendorOrderHandler, vendorOrdersHandler,
 } from "@/server/api/handlers/fulfillment";
 import { getOrderHandler } from "@/server/api/handlers/shopping";
 import { adminApproveRefundHandler, vendorBalanceHandler, vendorLedgerHandler } from "@/server/api/handlers/payments";
@@ -415,5 +415,51 @@ describe("admin support and reports", () => {
     expect(tooWide.status).toBe(400);
     expect((await call(salesReportHandler, { token: reporter.token, query: { from: "yesterday", to } })).status).toBe(400);
     expect((await call(salesReportHandler, { token: (await makeUser({ role: "customer" })).token, query: { from, to } })).status).toBe(403);
+  });
+});
+
+describe("courier dispatch and tracking", () => {
+  it("dispatches vendor order via REDX sandbox and looks up public tracking timeline", async () => {
+    const o = await placeShopOrder(shop, { prices: [45000, 55000], method: "online", pay: true });
+    const [vendorA, vendorB] = o.vendors;
+    const voId = o.vos[0]!._id.toHexString();
+
+    // Wrong vendor (404) and customer (403) rejected
+    expect((await call(dispatchOrderHandler, { method: "POST", token: vendorB!.user.token, params: { id: voId }, body: { carrier: "redx" } })).status).toBe(404);
+    expect((await call(dispatchOrderHandler, { method: "POST", token: o.buyer.token, params: { id: voId }, body: { carrier: "redx" } })).status).toBe(403);
+
+    // Vendor dispatches order with REDX
+    const res = await call(dispatchOrderHandler, {
+      method: "POST",
+      token: vendorA!.user.token,
+      params: { id: voId },
+      body: { carrier: "redx", weightGrams: 750 },
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.data).toMatchObject({
+      status: "shipped",
+      shipment: {
+        carrier: "REDX",
+        trackingNumber: expect.stringMatching(/^RDX-SB-/),
+      },
+    });
+
+    const trackingNumber = res.data.shipment.trackingNumber;
+
+    // Public tracking endpoint works without auth
+    const trackingRes = await call(trackShipmentHandler, {
+      params: { carrier: "redx", trackingNumber },
+    });
+
+    expect(trackingRes.status).toBe(200);
+    expect(trackingRes.data).toMatchObject({
+      carrier: "REDX",
+      trackingId: trackingNumber,
+      status: "in-transit",
+      events: expect.arrayContaining([
+        expect.objectContaining({ messageEn: expect.any(String), time: expect.any(String) }),
+      ]),
+    });
   });
 });

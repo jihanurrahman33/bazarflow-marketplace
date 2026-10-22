@@ -5,6 +5,7 @@ import { api, messageFor } from "@/lib/api";
 import { formatDate, humanize } from "@/lib/format";
 import { useAction, useApi } from "@/lib/hooks";
 import { ActionButton, FilterSelect, ListTable, ReasonButton } from "./console-kit";
+import { TrackingDetails } from "./order-views";
 import { useToast } from "./providers";
 import { Alert, Button, ConfirmDialog, ErrorPanel, Field, fieldMessage, ListSkeleton, Money, PageHeader, Stat, StatusBadge, type Column } from "./ui";
 
@@ -89,7 +90,12 @@ export function VendorOrderDetail({ id }: { id: string }) {
       <PageHeader title={`Order ${o.orderNumber}`} subtitle={`Placed ${formatDate(o.createdAt)}`}><StatusBadge status={o.status} /></PageHeader>
       <div className="row">
         {o.status === "new" && <ActionButton label="Accept order" variant="primary" size="md" path={`/vendor/orders/${id}/accept`} onDone={order.reload} success="Order accepted" />}
-        {o.status === "accepted" && <Button variant="primary" onClick={() => setShipOpen(true)}>Mark as shipped</Button>}
+        {o.status === "accepted" && (
+          <>
+            <ActionButton label="Dispatch with REDX" variant="primary" size="md" path={`/vendor/orders/${id}/dispatch`} body={{ carrier: "redx" }} onDone={order.reload} success="Dispatched via REDX" />
+            <Button variant="secondary" onClick={() => setShipOpen(true)}>Manual tracking</Button>
+          </>
+        )}
         {o.status === "shipped" && <ActionButton label="Mark as delivered" variant="primary" size="md" path={`/vendor/orders/${id}/deliver`} onDone={order.reload} success="Marked as delivered" />}
         {(o.status === "new" || o.status === "accepted") && <ReasonButton label={o.status === "new" ? "Reject" : "Cancel order"} title="Cancel this order?" danger path={`/vendor/orders/${id}/cancel`} onDone={order.reload} success="Order cancelled" hint="The customer sees this reason. Online payments are refunded automatically." />}
         {o.status === "return_requested" && (
@@ -111,7 +117,7 @@ export function VendorOrderDetail({ id }: { id: string }) {
         <section className="card stack" aria-labelledby="ship-to">
           <h2 id="ship-to">Ship to</h2>
           <address style={{ fontStyle: "normal" }}><strong>{a.recipient}</strong><br />{a.line1}{a.line2 ? `, ${a.line2}` : ""}<br />{a.city}, {a.district} {a.postalCode}<br />{a.phone}</address>
-          {o.shipment && <p><strong>{o.shipment.carrier}</strong> · <span className="mono">{o.shipment.trackingNumber}</span></p>}
+          {o.shipment && <TrackingDetails carrier={o.shipment.carrier} trackingNumber={o.shipment.trackingNumber} />}
           <details open><summary>History</summary><ol className="timeline small">{o.timeline.map((t, i) => <li key={i}><StatusBadge status={t.status} /> <span className="muted">{formatDate(t.at)}</span>{t.note && <span className="muted"> — {t.note}</span>}</li>)}</ol></details>
         </section>
       </div>

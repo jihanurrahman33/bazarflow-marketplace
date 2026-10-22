@@ -19,6 +19,8 @@ const schema = z
     PAYMENT_WEBHOOK_SECRET: secret,
     SSLCOMMERZ_STORE_ID: z.string().optional(),
     SSLCOMMERZ_STORE_PASSWORD: z.string().optional(),
+    REDX_API_TOKEN: z.string().optional(),
+    REDX_MODE: z.enum(["sandbox", "live"]).default("sandbox"),
     CLOUDINARY_CLOUD_NAME: z.string().optional(),
     CLOUDINARY_API_KEY: z.string().optional(),
     CLOUDINARY_API_SECRET: z.string().optional(),

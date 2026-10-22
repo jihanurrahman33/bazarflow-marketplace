@@ -1,1 +1,1 @@
-export { paymentReturnHandler as GET, paymentReturnHandler as POST } from "@/server/api/handlers/payments";
+export { paymentReturnHandler as GET, paymentReturnPostHandler as POST } from "@/server/api/handlers/payments";

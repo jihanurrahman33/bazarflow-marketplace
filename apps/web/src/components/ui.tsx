@@ -101,6 +101,7 @@ const STATUS: Record<string, [Tone, string]> = {
   pending_payment: ["warning", "…"], awaiting_payment: ["warning", "…"], confirmed: ["info", "✓"], new: ["info", "●"], accepted: ["info", "✓"], processing: ["info", "…"],
   partially_fulfilled: ["info", "◐"], shipped: ["info", "→"], delivered: ["success", "✓"], cancelled: ["neutral", "✕"], closed: ["neutral", "✓"],
   return_requested: ["warning", "↩"], returned: ["neutral", "↩"],
+  "in-transit": ["info", "→"], "pickup-pending": ["warning", "…"],
   // payments / refunds / payouts
   created: ["neutral", "…"], requires_action: ["warning", "!"], pending: ["warning", "…"], succeeded: ["success", "✓"], failed: ["danger", "✕"], unknown: ["warning", "?"],
   partially_refunded: ["info", "◐"], refunded: ["neutral", "↩"], paid: ["success", "✓"], none: ["neutral", "–"], cod_pending: ["warning", "₿"],

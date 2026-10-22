@@ -3217,7 +3217,7 @@
         }
       },
       "post": {
-        "operationId": "payments.return",
+        "operationId": "payments.return.post",
         "security": [],
         "parameters": [
           {
@@ -3432,6 +3432,52 @@
           "windowSeconds": 60,
           "by": "ip"
         },
+        "responses": {
+          "2XX": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tracking/{carrier}/{trackingNumber}": {
+      "get": {
+        "operationId": "tracking.get",
+        "security": [],
+        "parameters": [
+          {
+            "name": "carrier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "trackingNumber",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "2XX": {
             "description": "Success",
@@ -3939,6 +3985,54 @@
     "/api/v1/vendor/orders/{id}/deliver": {
       "post": {
         "operationId": "vendor.orders.deliver",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-required-role": [
+          "vendor"
+        ],
+        "responses": {
+          "2XX": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/vendor/orders/{id}/dispatch": {
+      "post": {
+        "operationId": "vendor.orders.dispatch",
         "security": [
           {
             "bearerAuth": []

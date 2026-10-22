@@ -38,8 +38,7 @@ export const refreshPaymentHandler = route<{ id: string }>(
   },
 );
 
-/** Browser lands here after the hosted page. It only forwards the shopper to the order page; it changes no state. */
-export const paymentReturnHandler = route<{ provider: string }>({ name: "payments.return", auth: false }, async (ctx) => {
+async function handlePaymentReturn(ctx: { query: <T>(schema: import("zod").ZodType<T>) => T; rawBody: () => Promise<string> }) {
   let orderId = ctx.query(z.object({ order: objectIdStr.optional(), result: z.enum(["success", "fail", "cancel"]).optional() })).order;
   if (!orderId) {
     const raw = await ctx.rawBody().catch(() => "");
@@ -55,7 +54,11 @@ export const paymentReturnHandler = route<{ provider: string }>({ name: "payment
     return { status: 303, redirectTo: `${getEnv().APP_ORIGIN}/orders` };
   }
   return { status: 303, redirectTo: `${getEnv().APP_ORIGIN}/orders/${orderId}?payment=returned` };
-});
+}
+
+/** Browser lands here after the hosted page. It only forwards the shopper to the order page; it changes no state. */
+export const paymentReturnHandler = route<{ provider: string }>({ name: "payments.return", auth: false }, async (ctx) => handlePaymentReturn(ctx));
+export const paymentReturnPostHandler = route<{ provider: string }>({ name: "payments.return.post", auth: false }, async (ctx) => handlePaymentReturn(ctx));
 
 // ----- provider webhook -----
 export const paymentWebhookHandler = route<{ provider: string }>(

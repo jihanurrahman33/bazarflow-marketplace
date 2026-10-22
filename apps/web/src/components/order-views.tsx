@@ -138,7 +138,7 @@ function VendorOrderCard({ v, onChanged }: { v: VendorOrderView; onChanged: () =
           <span className="row"><Money minor={i.lineTotalMinor} />{v.status === "delivered" && <Button size="sm" variant="ghost" onClick={() => setReviewing(i)}>Review</Button>}</span>
         </div>
       ))}
-      {v.shipment && <p className="small"><strong>{v.shipment.carrier}</strong> · tracking <span className="mono">{v.shipment.trackingNumber}</span></p>}
+      {v.shipment && <TrackingDetails carrier={v.shipment.carrier} trackingNumber={v.shipment.trackingNumber} />}
       <details><summary className="small">Progress</summary>
         <ol className="timeline small">{v.timeline.map((t, idx) => <li key={idx}><StatusBadge status={t.status} /> <span className="muted">{formatDate(t.at)}</span>{t.note && <span className="muted"> — {t.note}</span>}</li>)}</ol>
       </details>
@@ -146,6 +146,55 @@ function VendorOrderCard({ v, onChanged }: { v: VendorOrderView; onChanged: () =
       <ReturnDialog open={returning} id={v.id} onClose={() => setReturning(false)} onDone={() => { setReturning(false); onChanged(); }} />
       <ReviewDialog item={reviewing} onClose={() => setReviewing(null)} />
     </section>
+  );
+}
+
+export function TrackingDetails({ carrier, trackingNumber }: { carrier: string; trackingNumber: string }) {
+  const [open, setOpen] = useState(false);
+  const track = useApi<{ carrier: string; trackingId: string; status: string; events: { messageEn: string; messageBn?: string; time: string }[] }>(
+    open ? `/tracking/${encodeURIComponent(carrier)}/${encodeURIComponent(trackingNumber)}` : null,
+  );
+
+  return (
+    <div className="stack small" style={{ marginTop: "var(--space-2)" }}>
+      <div className="row-between">
+        <p className="small" style={{ margin: 0 }}>
+          <strong>{carrier}</strong> · tracking <span className="mono">{trackingNumber}</span>
+        </p>
+        <Button size="sm" variant="ghost" onClick={() => setOpen((prev) => !prev)}>
+          {open ? "Hide courier updates" : "Track live package"}
+        </Button>
+      </div>
+      {open && (
+        <div className="card" style={{ padding: "var(--space-3)", background: "var(--color-surface-subtle)" }}>
+          {track.loading && <p className="muted small">Connecting to {carrier} tracking...</p>}
+          {track.error && <p className="muted small">Courier updates temporarily unavailable.</p>}
+          {track.data && (
+            <div className="stack small">
+              <div className="row-between">
+                <span><strong>Carrier:</strong> {track.data.carrier}</span>
+                <StatusBadge status={track.data.status} />
+              </div>
+              <p className="small mono muted">Tracking #{track.data.trackingId}</p>
+              {track.data.events.length === 0 ? (
+                <p className="muted small">No scan events recorded yet.</p>
+              ) : (
+                <ol className="timeline small" style={{ marginTop: "var(--space-2)" }}>
+                  {track.data.events.map((e, idx) => (
+                    <li key={idx}>
+                      <span className="bold">{e.messageEn}</span>
+                      {e.messageBn && <span className="muted"> ({e.messageBn})</span>}
+                      <br />
+                      <span className="muted small">{formatDate(e.time)}</span>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 

@@ -3,7 +3,7 @@ import { created, ok, page, route, type Ctx } from "@/server/api/route";
 import { requirePermission, requireRole, requireVendor } from "@/server/modules/authorization/actor";
 import { parseObjectId } from "@/server/shared/ids";
 import { pageQuery } from "@/server/shared/pagination";
-import { approveReturn, getVendorOrder, listVendorOrders, rejectReturn, requestReturn, toVendorOrderDto, transitionVendorOrder } from "@/server/modules/orders/fulfillment";
+import { approveReturn, dispatchWithCourier, getShipmentTracking, getVendorOrder, listVendorOrders, rejectReturn, requestReturn, toVendorOrderDto, transitionVendorOrder } from "@/server/modules/orders/fulfillment";
 import { getCollections } from "@/server/db/collections";
 
 const vendorScope = <P>(ctx: Ctx<P>) => ({ kind: "vendor" as const, userId: ctx.actor.userId, vendorId: requireVendor(ctx.actor) });
@@ -34,6 +34,16 @@ export const shipOrderHandler = route<{ id: string }>({ name: "vendor.orders.shi
   vendorScope(ctx); // authorize before parsing the body
   const b = await ctx.body(z.strictObject({ carrier: z.string().trim().min(2).max(60), trackingNumber: z.string().trim().min(3).max(60).regex(/^[0-9A-Za-z\-_/ ]+$/) }));
   return respond(transitionVendorOrder(vendorScope(ctx), parseObjectId(ctx.params.id), { to: "shipped", shipment: b }, ctx.requestId));
+});
+
+export const dispatchOrderHandler = route<{ id: string }>({ name: "vendor.orders.dispatch" }, async (ctx) => {
+  vendorScope(ctx); // authorize before parsing the body
+  const b = (await ctx.body(z.strictObject({ carrier: z.string().trim().min(2).max(30).optional(), weightGrams: z.number().int().min(50).max(50000).optional() })).catch(() => ({}))) ?? {};
+  return respond(dispatchWithCourier(vendorScope(ctx), parseObjectId(ctx.params.id), b, ctx.requestId));
+});
+
+export const trackShipmentHandler = route<{ carrier: string; trackingNumber: string }>({ name: "tracking.get", auth: false }, async (ctx) => {
+  return ok(await getShipmentTracking(ctx.params.carrier, ctx.params.trackingNumber));
 });
 
 export const deliverOrderHandler = route<{ id: string }>({ name: "vendor.orders.deliver" }, async (ctx) =>
