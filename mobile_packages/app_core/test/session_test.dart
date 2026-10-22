@@ -76,6 +76,24 @@ void main() {
     expect(rig.session.state, isNot(isA<SignedIn>()));
   });
 
+  test('a malformed auth response is a typed, recoverable error — never a crash or a stuck splash screen', () async {
+    // refresh returns 200 with no tokens (captive portal / proxy / server bug)
+    var rig = TestRig((req) => FakeReply.ok({}));
+    await rig.store.writeRefreshToken('rt-1');
+    await rig.session.bootstrap();
+    expect(rig.session.state, const SessionUnavailable());
+    expect(await rig.store.readRefreshToken(), 'rt-1'); // the stored session is kept
+
+    rig = TestRig((req) => FakeReply.ok({'user': 'not-an-object', 'tokens': {}}));
+    final e = await failureOf(rig.session.login('a@b.co', 'password-123'));
+    expect(e!.code, 'BAD_RESPONSE');
+    expect(rig.session.state, isNot(isA<SignedIn>()));
+    expect(await rig.store.readRefreshToken(), isNull);
+
+    rig = TestRig((req) => FakeReply.ok({'user': userJson(), 'tokens': {'accessToken': 'a'}}));
+    expect((await failureOf(rig.session.login('a@b.co', 'password-123')))!.code, 'BAD_RESPONSE');
+  });
+
   test('device registrar uses a stable installation id and tolerates failures on unregister', () async {
     final rig = TestRig((req) => req.method == 'DELETE' ? FakeReply.error(500, 'INTERNAL') : FakeReply(201, {'data': {'registered': true}}));
     final reg = DeviceRegistrar(client: rig.client, store: rig.store, appId: 'com.test.app', platform: 'android');

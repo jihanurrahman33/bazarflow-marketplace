@@ -7,6 +7,21 @@ import 'config.dart';
 import 'errors.dart';
 import 'token_store.dart';
 
+const _badResponse = ApiException(status: 502, code: 'BAD_RESPONSE', message: 'Unexpected response from the server.');
+
+/// Auth payloads cross a trust boundary (proxies, captive portals). Never cast blindly: a bad body is a recoverable error.
+String _string(Map<String, dynamic> m, String key) {
+  final v = m[key];
+  if (v is String && v.isNotEmpty) return v;
+  throw _badResponse;
+}
+
+Map<String, dynamic> _object(Map<String, dynamic> m, String key) {
+  final v = m[key];
+  if (v is Map<String, dynamic>) return v;
+  throw _badResponse;
+}
+
 class SessionUser extends Equatable {
   const SessionUser({
     required this.id,
@@ -122,7 +137,7 @@ class SessionManager implements AuthSession {
 
   Future<void> _loadProfile() async {
     final res = await client.get('/me');
-    final u = SessionUser.fromJson(res.map);
+    final u = _parseUser(res.map);
     if (allowedRoles != null && !allowedRoles!.contains(u.role)) {
       await _clear();
       _emit(const SignedOut(reason: 'wrong_app'));
@@ -145,18 +160,28 @@ class SessionManager implements AuthSession {
     return _accept(res);
   }
 
+  SessionUser _parseUser(Map<String, dynamic> m) {
+    try {
+      return SessionUser.fromJson(m);
+    } on TypeError {
+      throw _badResponse;
+    }
+  }
+
   Future<SessionUser> _accept(ApiResponse res) async {
-    final user = SessionUser.fromJson(res.map['user'] as Map<String, dynamic>);
+    final user = _parseUser(_object(res.map, 'user'));
+    final tokens = _object(res.map, 'tokens');
+    final accessToken = _string(tokens, 'accessToken');
+    final refreshToken = _string(tokens, 'refreshToken');
     if (allowedRoles != null && !allowedRoles!.contains(user.role)) {
       // Authenticated, but this app is not for that kind of account. Do not keep the session.
       try {
-        await client.post('/auth/logout', body: {'refreshToken': (res.map['tokens'] as Map<String, dynamic>)['refreshToken']}, authenticated: false);
+        await client.post('/auth/logout', body: {'refreshToken': refreshToken}, authenticated: false);
       } catch (_) {/* best effort */}
       throw const ApiException(status: 403, code: 'WRONG_APP', message: 'This account cannot be used in this app.');
     }
-    final tokens = res.map['tokens'] as Map<String, dynamic>;
-    _accessToken = tokens['accessToken'] as String;
-    await store.writeRefreshToken(tokens['refreshToken'] as String);
+    _accessToken = accessToken;
+    await store.writeRefreshToken(refreshToken);
     _emit(SignedIn(user));
     return user;
   }
@@ -179,8 +204,10 @@ class SessionManager implements AuthSession {
     }
     try {
       final res = await client.post('/auth/refresh', body: {'refreshToken': rt, 'device': _device}, authenticated: false);
-      _accessToken = res.map['accessToken'] as String;
-      await store.writeRefreshToken(res.map['refreshToken'] as String);
+      final access = _string(res.map, 'accessToken');
+      final refresh = _string(res.map, 'refreshToken');
+      _accessToken = access;
+      await store.writeRefreshToken(refresh);
       return true;
     } on ApiException catch (e) {
       if (e.status == 401 || e.status == 403) {
