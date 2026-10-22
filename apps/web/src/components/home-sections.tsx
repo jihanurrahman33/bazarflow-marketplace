@@ -121,7 +121,7 @@ export async function CategoryTiles() {
 }
 
 export function CategoryTilesSkeleton() {
-  return <div className="cat-tiles" aria-busy="true">{Array.from({ length: 4 }, (_, i) => <div key={i} className="skeleton" style={{ aspectRatio: "4 / 3", borderRadius: "var(--radius-lg)" }} />)}</div>;
+  return <div className="cat-tiles" aria-busy="true">{Array.from({ length: 4 }, (_, i) => <div key={i} className="skeleton cat-tile-skel" />)}</div>;
 }
 
 /** Items that are genuinely discounted (compare-at above price), biggest discount first. */
@@ -210,7 +210,7 @@ export async function NewArrivals() {
   );
 }
 export const NewArrivalsSkeleton = () => <div className="grid grid-products" aria-busy="true">{Array.from({ length: 8 }, (_, i) => <ProductCardSkeleton key={i} />)}</div>;
-export const StoresSkeleton = () => <div className="stores" aria-busy="true">{Array.from({ length: 3 }, (_, i) => <div key={i} className="skeleton" style={{ height: 72, borderRadius: "var(--radius-lg)" }} />)}</div>;
+export const StoresSkeleton = () => <div className="stores" aria-busy="true">{Array.from({ length: 3 }, (_, i) => <div key={i} className="skeleton store-card-skel" />)}</div>;
 export { RailSkeleton };
 
 export function SellerBanner() {
