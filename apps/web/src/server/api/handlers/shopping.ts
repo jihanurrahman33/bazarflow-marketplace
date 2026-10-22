@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { canonicalDistrict } from "@/lib/bd-geo";
 import { created, noContent, ok, page, route } from "@/server/api/route";
 import { requireRole } from "@/server/modules/authorization/actor";
 import { parseObjectId } from "@/server/shared/ids";
@@ -20,7 +21,12 @@ const phone = z.string().regex(/^\+?[0-9]{7,15}$/);
 const addressBody = z.strictObject({
   label: z.string().trim().min(1).max(40), recipient: z.string().trim().min(2).max(80), phone,
   line1: z.string().trim().min(3).max(200), line2: z.string().trim().max(200).optional(),
-  city: z.string().trim().min(2).max(80), district: z.string().trim().min(2).max(80),
+  city: z.string().trim().min(2).max(80),
+  district: z.string().trim().min(2).max(80).transform((v, ctx) => {
+    const d = canonicalDistrict(v);
+    if (!d) ctx.addIssue({ code: "custom", message: "Choose one of Bangladesh's 64 districts." });
+    return d ?? v;
+  }),
   postalCode: z.string().trim().regex(/^[0-9]{4}$/), isDefault: z.boolean().optional(),
 });
 

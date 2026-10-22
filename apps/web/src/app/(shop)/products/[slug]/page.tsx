@@ -11,6 +11,7 @@ import { ProductReviews } from "@/components/product-reviews";
 import { ProductSelection } from "@/components/product-selection";
 import { TrackView } from "@/components/track-view";
 import { Stars } from "@/components/ui";
+import { getT } from "@/lib/i18n-server";
 import { getProduct, getProducts, getRelated, getReviews } from "@/lib/server-data";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -28,6 +29,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ProductPage({ params }: Props) {
   const { slug } = await params;
+  const t = await getT();
   const [p, reviews] = await Promise.all([getProduct(slug), getReviews(slug)]);
   if (!p.ok) {
     if (p.notFound) notFound();
@@ -58,20 +60,20 @@ export default async function ProductPage({ params }: Props) {
       <div className="pdp">
         <div className="pdp-gallery"><Gallery media={v.media} title={v.title} /></div>
         <div className="pdp-info stack">
-          {maxOff > 0 && <span className="badge badge-danger" style={{ alignSelf: "flex-start" }}>Up to {maxOff}% off</span>}
+          {maxOff > 0 && <span className="badge badge-danger" style={{ alignSelf: "flex-start" }}>{t("Up to {n}% off", { n: maxOff })}</span>}
           <h1>{v.title}</h1>
           <div className="row">
-            {reviews.ok && reviews.value.summary.count > 0 && <><Stars value={reviews.value.summary.average} /><a href="#reviews" className="muted small">({reviews.value.summary.count} reviews)</a></>}
-            {v.vendor && <span className="muted">Sold by <Link href={`/vendors/${v.vendor.slug}`}>{v.vendor.name}</Link></span>}
+            {reviews.ok && reviews.value.summary.count > 0 && <><Stars value={reviews.value.summary.average} /><a href="#reviews" className="muted small">{t("({n} reviews)", { n: reviews.value.summary.count })}</a></>}
+            {v.vendor && <span className="muted">{t("Sold by")} <Link href={`/vendors/${v.vendor.slug}`}>{v.vendor.name}</Link></span>}
           </div>
           <TrackView productId={v.id} />
           <ProductBuy productId={v.id} slug={v.slug} currency={v.currency} options={v.options} variants={v.variants} />
-          <ul className="pdp-perks" aria-label="Delivery and returns">
-            <li><IconTruck width={18} height={18} />Tracked delivery, shipping shown at checkout</li>
-            <li><IconReturn width={18} height={18} />Easy returns from your order page</li>
-            <li><IconShield width={18} height={18} />Order confirmed only after payment is verified</li>
+          <ul className="pdp-perks" aria-label={t("Delivery and returns")}>
+            <li><IconTruck width={18} height={18} />{t("Tracked delivery, shipping shown at checkout")}</li>
+            <li><IconReturn width={18} height={18} />{t("Easy returns from your order page")}</li>
+            <li><IconShield width={18} height={18} />{t("Order confirmed only after payment is verified")}</li>
           </ul>
-          <section aria-labelledby="desc" className="pdp-desc"><h2 id="desc">About this item</h2><p style={{ whiteSpace: "pre-line" }}>{v.description}</p></section>
+          <section aria-labelledby="desc" className="pdp-desc"><h2 id="desc">{t("About this item")}</h2><p style={{ whiteSpace: "pre-line" }}>{v.description}</p></section>
         </div>
       </div>
       </ProductSelection>
@@ -90,6 +92,7 @@ export default async function ProductPage({ params }: Props) {
 
 /** Rows under the product: what buyers of this item also bought (only when there is real repeat-purchase data), similar items ranked by popularity and price, then the rest of the store. */
 async function MoreFrom({ id, vendor, category }: { id: string; vendor?: string; category?: string }) {
+  const t = await getT();
   const [related, fromStore] = await Promise.all([getRelated(id), vendor ? getProducts({ sort: "newest", limit: 10, vendor }) : Promise.resolve(undefined)]);
   const bought = related.ok ? related.value.alsoBought : [];
   const similar = related.ok ? related.value.similar : [];
@@ -98,9 +101,9 @@ async function MoreFrom({ id, vendor, category }: { id: string; vendor?: string;
   const storeOnly = fromStore?.ok ? fromStore.value.items.filter((p) => !shown.has(p.id)) : [];
   return (
     <>
-      {bought.length >= 3 && <ProductRail title="Customers also bought" items={bought} source="also_bought" />}
-      <ProductRail title="Similar items" href={category ? `/category/${category}` : undefined} items={similar} source="similar" />
-      <ProductRail title="More from this store" href={vendor ? `/vendors/${vendor}` : undefined} items={storeOnly} source="same_store" />
+      {bought.length >= 3 && <ProductRail title={t("Customers also bought")} items={bought} source="also_bought" />}
+      <ProductRail title={t("Similar items")} href={category ? `/category/${category}` : undefined} items={similar} source="similar" />
+      <ProductRail title={t("More from this store")} href={vendor ? `/vendors/${vendor}` : undefined} items={storeOnly} source="same_store" />
     </>
   );
 }

@@ -574,3 +574,11 @@ td input.mono { min-width: 190px; }
 .qa-a { color: var(--color-text-primary); }
 .seller-reply { margin: 8px 0; padding: 10px 14px; border-left: 3px solid var(--color-primary); background: var(--color-surface-container); border-radius: 0 10px 10px 0; }
 .seller-reply p { margin: 4px 0 0; }
+
+/* language switch */
+.lang-switch { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--color-border); border-radius: 999px; }
+.lang-switch button { border: 0; background: none; padding: 4px 10px; border-radius: 999px; font: inherit; font-size: 13px; color: var(--color-text-secondary); cursor: pointer; }
+.lang-switch button[aria-pressed="true"] { background: var(--color-text-primary); color: var(--color-surface); font-weight: 600; }
+.catnav-end { display: flex; align-items: center; gap: 20px; }
+.drawer-lang { display: flex; align-items: center; justify-content: space-between; padding: 12px 4px; border-bottom: 1px solid var(--color-border); }
+.footer-about .lang-switch { margin-top: 14px; }

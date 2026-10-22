@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
-import { Inter } from "next/font/google";
+import { Inter, Noto_Sans_Bengali } from "next/font/google";
 import { Suspense } from "react";
 import "./globals.css";
 import "./storefront.css";
@@ -11,11 +11,14 @@ import { SiteHeader } from "@/components/site-header";
 import { CATEGORY_BANNER, siteImage } from "@/lib/site";
 import { TopProgress } from "@/components/top-progress";
 import { getCategories } from "@/lib/server-data";
+import { LangProvider } from "@/components/lang";
+import { getLocale, getT } from "@/lib/i18n-server";
 
 // Rendered per request: the category bar reads the database and must never be prerendered at build time.
 export const dynamic = "force-dynamic";
 
 const inter = Inter({ subsets: ["latin"], display: "swap", variable: "--font-sans" });
+const bengali = Noto_Sans_Bengali({ subsets: ["bengali"], display: "swap", variable: "--font-bn", weight: ["400", "500", "600", "700"] });
 
 export const metadata: Metadata = {
   title: { default: "BazarFlow — shop from trusted sellers", template: "%s · BazarFlow" },
@@ -34,12 +37,13 @@ export const metadata: Metadata = {
 export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover" };
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
-  const cats = await getCategories();
+  const [cats, locale, t] = await Promise.all([getCategories(), getLocale(), getT()]);
   const navCats = cats.ok ? cats.value.map((c) => ({ ...c, image: CATEGORY_BANNER[c.slug] ? siteImage(CATEGORY_BANNER[c.slug]!, { w: 640, h: 400 }) : undefined })) : [];
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang={locale} className={`${inter.variable} ${bengali.variable}`}>
       <body>
-        <a href="#main" className="skip-link">Skip to content</a>
+        <a href="#main" className="skip-link">{t("Skip to content")}</a>
+        <LangProvider locale={locale}>
         <Providers>
           <WishlistProvider>
           <Suspense fallback={null}><TopProgress /></Suspense>
@@ -48,6 +52,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           <SiteFooter categories={cats.ok ? cats.value : []} />
         </WishlistProvider>
         </Providers>
+        </LangProvider>
       </body>
     </html>
   );

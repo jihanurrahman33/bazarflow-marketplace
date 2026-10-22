@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getCategories, getProducts, getSearchFacets } from "@/lib/server-data";
 import type { ProductSort } from "@/server/modules/catalog/public";
 import { IconFilter } from "./icons";
+import { getT } from "@/lib/i18n-server";
 import { InfiniteProducts } from "./infinite-products";
 import { TrackSearch } from "./track-view";
 import { ProductCard } from "./product-card";
@@ -38,6 +39,7 @@ const asInt = (v?: string) => (v && /^\d{1,9}$/.test(v) ? Number(v) * 100 : unde
 
 /** Server-rendered result list with shareable URLs (filters live in the query string; "next" uses the keyset cursor). */
 export async function Listing({ base, params, heading }: { base: string; params: ListingParams; heading?: string }) {
+  const t = await getT();
   const sort = (SORTS.some((s) => s.value === params.sort) ? params.sort : params.q ? "relevance" : "newest") as ProductSort;
   const searching = !!params.q && params.q.length >= 2;
   const [result, cats, facets] = await Promise.all([
@@ -69,20 +71,20 @@ export async function Listing({ base, params, heading }: { base: string; params:
   const filters = (
     <div className="stack">
       {searching && facetList && facetList.length > 0 ? (
-        <nav aria-label="Categories" className="filter-block">
-          <h2>Categories</h2>
+        <nav aria-label={t("Categories")} className="filter-block">
+          <h2>{t("Categories")}</h2>
           <ul className="filter-list">
-            <li><Link href={href("/search", { ...params, category: undefined, cursor: undefined }, {})} aria-current={!params.category ? "true" : undefined}>All results</Link></li>
+            <li><Link href={href("/search", { ...params, category: undefined, cursor: undefined }, {})} aria-current={!params.category ? "true" : undefined}>{t("All results")}</Link></li>
             {facetList.map((f) => (
               <li key={f.slug}><Link href={href("/search", { ...params, category: f.slug, cursor: undefined }, {})} aria-current={params.category === f.slug ? "true" : undefined}>{f.name} <span className="muted small">({f.count})</span></Link></li>
             ))}
           </ul>
         </nav>
       ) : cats.ok && cats.value.length > 0 && (
-        <nav aria-label="Categories" className="filter-block">
-          <h2>Categories</h2>
+        <nav aria-label={t("Categories")} className="filter-block">
+          <h2>{t("Categories")}</h2>
           <ul className="filter-list">
-            <li><Link href={href("/search", { ...params, category: undefined, cursor: undefined }, {})} aria-current={!activeCategory ? "true" : undefined}>All products</Link></li>
+            <li><Link href={href("/search", { ...params, category: undefined, cursor: undefined }, {})} aria-current={!activeCategory ? "true" : undefined}>{t("All products")}</Link></li>
             {visibleCats.map((c) => (
               <li key={c.id}>
                 <Link href={`/category/${c.slug}`} aria-current={activeCategory === c.slug ? "true" : undefined}>{c.name}</Link>
@@ -92,20 +94,20 @@ export async function Listing({ base, params, heading }: { base: string; params:
               </li>
             ))}
           </ul>
-          {hiddenCount > 0 && <Link href="/categories" className="filter-more">Show all {cats.value.length} categories</Link>}
+          {hiddenCount > 0 && <Link href="/categories" className="filter-more">{t("Show all {n} categories", { n: cats.value.length })}</Link>}
         </nav>
       )}
-      <form method="get" action={base} className="filter-block" aria-label="Price filter">
-        <h2>Price (৳)</h2>
+      <form method="get" action={base} className="filter-block" aria-label={t("Price filter")}>
+        <h2>{t("Price (৳)")}</h2>
         {params.q && <input type="hidden" name="q" value={params.q} />}
         {params.sort && <input type="hidden" name="sort" value={params.sort} />}
         {params.category && base === "/search" && <input type="hidden" name="category" value={params.category} />}
         <div className="price-range">
-          <label className="sr-only" htmlFor="f-min">Minimum price</label><input id="f-min" name="minPrice" className="input" inputMode="numeric" pattern="[0-9]*" placeholder="Min" defaultValue={params.minPrice} />
+          <label className="sr-only" htmlFor="f-min">{t("Minimum price")}</label><input id="f-min" name="minPrice" className="input" inputMode="numeric" pattern="[0-9]*" placeholder={t("Min")} defaultValue={params.minPrice} />
           <span aria-hidden="true">–</span>
-          <label className="sr-only" htmlFor="f-max">Maximum price</label><input id="f-max" name="maxPrice" className="input" inputMode="numeric" pattern="[0-9]*" placeholder="Max" defaultValue={params.maxPrice} />
+          <label className="sr-only" htmlFor="f-max">{t("Maximum price")}</label><input id="f-max" name="maxPrice" className="input" inputMode="numeric" pattern="[0-9]*" placeholder={t("Max")} defaultValue={params.maxPrice} />
         </div>
-        <button className="btn btn-primary btn-block" type="submit">Apply</button>
+        <button className="btn btn-primary btn-block" type="submit">{t("Apply")}</button>
       </form>
     </div>
   );
@@ -113,38 +115,38 @@ export async function Listing({ base, params, heading }: { base: string; params:
   return (
     <div className="listing">
       <aside className="listing-filters">
-        <details className="filters-mobile"><summary><IconFilter /> Filters</summary>{filters}</details>
+        <details className="filters-mobile"><summary><IconFilter /> {t("Filters")}</summary>{filters}</details>
         <div className="filters-desktop">{filters}</div>
       </aside>
 
       <div className="stack listing-main">
         <div className="listing-toolbar">
-          <div className="row">{result.ok && <span className="result-count">{result.value.items.length}{result.value.nextCursor ? "+" : ""} product{result.value.items.length === 1 ? "" : "s"}{params.cursor ? " on this page" : ""}</span>}{chips.map((c) => <Link key={c.label} href={c.to} className="chip" aria-label={`Remove filter ${c.label}`}>{c.label} <span aria-hidden="true">×</span></Link>)}</div>
-          <form method="get" action={base} className="row" aria-label="Sort">
+          <div className="row">{result.ok && <span className="result-count">{t(result.value.items.length === 1 && !result.value.nextCursor ? "{n} product" : "{n} products", { n: `${result.value.items.length}${result.value.nextCursor ? "+" : ""}` })}</span>}{chips.map((c) => <Link key={c.label} href={c.to} className="chip" aria-label={`Remove filter ${c.label}`}>{c.label} <span aria-hidden="true">×</span></Link>)}</div>
+          <form method="get" action={base} className="row" aria-label={t("Sort")}>
             {params.q && <input type="hidden" name="q" value={params.q} />}
             {params.minPrice && <input type="hidden" name="minPrice" value={params.minPrice} />}
             {params.maxPrice && <input type="hidden" name="maxPrice" value={params.maxPrice} />}
             {params.category && base === "/search" && <input type="hidden" name="category" value={params.category} />}
-            <label htmlFor="f-sort" className="muted small">Sort by</label>
-            <select id="f-sort" name="sort" className="input input-sm" defaultValue={sort}>{params.q && <option value="relevance">Relevance</option>}{SORTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}</select>
-            <button className="btn btn-sm" type="submit">Sort</button>
+            <label htmlFor="f-sort" className="muted small">{t("Sort by")}</label>
+            <select id="f-sort" name="sort" className="input input-sm" defaultValue={sort}>{params.q && <option value="relevance">{t("Relevance")}</option>}{SORTS.map((s) => <option key={s.value} value={s.value}>{t(s.label)}</option>)}</select>
+            <button className="btn btn-sm" type="submit">{t("Sort")}</button>
           </form>
         </div>
 
-        {result.ok && result.value.corrected && <p className="did-you-mean" role="status">Showing results for <strong>{result.value.corrected.to}</strong>. We found nothing for “{result.value.corrected.from}”.</p>}
+        {result.ok && result.value.corrected && <p className="did-you-mean" role="status">{t("Showing results for {to}. We found nothing for “{from}”.", { to: result.value.corrected.to, from: result.value.corrected.from })}</p>}
         {!result.ok ? (
-          <div className="alert alert-danger" role="alert">We couldn&apos;t load products right now. Please try again in a moment.</div>
+          <div className="alert alert-danger" role="alert">{t("We couldn't load products right now. Please refresh in a moment.")}</div>
         ) : result.value.items.length === 0 ? (
-          <EmptyState title={params.q ? `No results for “${params.q}”` : heading ? `Nothing in ${heading} yet` : "No products yet"} action={<Link href={params.q || chips.length ? "/" : "/categories"} className="btn btn-primary">{params.q || chips.length ? "Back to home" : "Browse categories"}</Link>}>
-            {params.q || chips.length ? "Try a different search or remove some filters." : "New products land here as sellers publish them. Browse other categories in the meantime."}
+          <EmptyState title={params.q ? t("No results for “{q}”", { q: params.q }) : heading ? t("Nothing in {name} yet", { name: heading }) : t("No products yet")} action={<Link href={params.q || chips.length ? "/" : "/categories"} className="btn btn-primary">{params.q || chips.length ? t("Back to home") : t("Browse categories")}</Link>}>
+            {params.q || chips.length ? t("Try a different search or remove some filters.") : t("New products land here as sellers publish them. Browse other categories in the meantime.")}
           </EmptyState>
         ) : (
           <>
             {params.q && !params.cursor && <TrackSearch query={params.q} results={result.value.items.length} />}
             <div className="grid grid-products">{result.value.items.map((p, i) => <ProductCard key={p.id} p={p} priority={i < 4} source={source} />)}</div>
-            <nav className="row-between" aria-label="Pagination">
-              {params.cursor ? <Link href={href(base, params, { cursor: undefined })} className="btn">← First page</Link> : <span />}
-              {result.value.nextCursor ? <noscript><Link href={href(base, params, { cursor: result.value.nextCursor })} className="btn btn-primary" rel="next">Next page →</Link></noscript> : <span />}
+            <nav className="row-between" aria-label={t("Pagination")}>
+              {params.cursor ? <Link href={href(base, params, { cursor: undefined })} className="btn">{t("← First page")}</Link> : <span />}
+              {result.value.nextCursor ? <noscript><Link href={href(base, params, { cursor: result.value.nextCursor })} className="btn btn-primary" rel="next">{t("Next page →")}</Link></noscript> : <span />}
             </nav>
             {result.value.nextCursor && <InfiniteProducts query={apiQuery} initialCursor={result.value.nextCursor} source={source} />}
           </>

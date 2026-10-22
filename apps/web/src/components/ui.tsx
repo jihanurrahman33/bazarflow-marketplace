@@ -3,6 +3,7 @@ import { useEffect, useId, useRef, type ButtonHTMLAttributes, type ReactNode } f
 import Link from "next/link";
 import { ApiError, messageFor } from "@/lib/api";
 import { formatMoney, humanize } from "@/lib/format";
+import { useT } from "./lang";
 
 export const cx = (...c: (string | false | undefined | null)[]) => c.filter(Boolean).join(" ");
 
@@ -148,8 +149,9 @@ export function Stat({ label, value, hint, icon, tone = "primary", children }: {
 }
 
 export function LoadMore({ hasMore, loading, onClick }: { hasMore: boolean; loading: boolean; onClick: () => void }) {
+  const t = useT();
   if (!hasMore) return null;
-  return <div className="center"><Button onClick={onClick} loading={loading}>Load more</Button></div>;
+  return <div className="center"><Button onClick={onClick} loading={loading}>{t("Load more")}</Button></div>;
 }
 
 export interface Column<T> { key: string; header: string; render: (row: T) => ReactNode; numeric?: boolean }

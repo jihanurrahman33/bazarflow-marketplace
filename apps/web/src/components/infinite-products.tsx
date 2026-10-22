@@ -2,11 +2,13 @@
 import { useCallback, useState } from "react";
 import { api, messageFor } from "@/lib/api";
 import { useInView } from "./in-view";
+import { useT } from "./lang";
 import { ProductCard, ProductCardSkeleton, type ProductCardData } from "./product-card";
 import { Button } from "./ui";
 
 /** Continues a product grid as the shopper scrolls: the first page is server-rendered, the rest arrives just before it is needed. */
 export function InfiniteProducts({ query, initialCursor, source }: { query: string; initialCursor: string; source?: string }) {
+  const t = useT();
   const [items, setItems] = useState<ProductCardData[]>([]);
   const [cursor, setCursor] = useState<string | null>(initialCursor);
   const [loading, setLoading] = useState(false);
@@ -33,8 +35,8 @@ export function InfiniteProducts({ query, initialCursor, source }: { query: stri
     <>
       {items.length > 0 && <div className="grid grid-products" aria-live="polite">{items.map((p) => <ProductCard key={p.id} p={p} source={source} />)}</div>}
       {loading && <div className="grid grid-products" aria-busy="true">{Array.from({ length: 4 }, (_, i) => <ProductCardSkeleton key={i} />)}</div>}
-      {error && <div className="center stack"><p className="muted">{error}</p><Button onClick={() => void more()}>Try again</Button></div>}
-      {cursor === null && items.length > 0 && <p className="muted small center">You&apos;ve reached the end.</p>}
+      {error && <div className="center stack"><p className="muted">{error}</p><Button onClick={() => void more()}>{t("Try again")}</Button></div>}
+      {cursor === null && items.length > 0 && <p className="muted small center">{t("You've reached the end.")}</p>}
       <div ref={sentinel} aria-hidden="true" style={{ height: 1 }} />
     </>
   );

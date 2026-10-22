@@ -5,6 +5,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { formatMoneyShort } from "@/lib/format";
 import { IconClose, IconSearch } from "./icons";
+import { useT } from "./lang";
 import { SmartImage } from "./smart-image";
 import { announceNavigation } from "./top-progress";
 
@@ -15,6 +16,7 @@ const saveRecent = (q: string) => { try { localStorage.setItem(RECENT_KEY, JSON.
 
 /** Search with live product suggestions, recent searches and full keyboard support (arrows, Enter, Escape). */
 export function HeaderSearch({ categories }: { categories: { slug: string; name: string }[] }) {
+  const t = useT();
   const router = useRouter();
   const listId = useId();
   const box = useRef<HTMLDivElement>(null);
@@ -67,28 +69,28 @@ export function HeaderSearch({ categories }: { categories: { slug: string; name:
     <div className="hsearch" ref={box}>
       <form role="search" onSubmit={submit} onKeyDown={onKey}>
         <IconSearch className="hsearch-icon" />
-        <label htmlFor="site-search" className="sr-only">Search products</label>
+        <label htmlFor="site-search" className="sr-only">{t("Search products")}</label>
         <input
-          id="site-search" type="search" value={q} placeholder="Search products" maxLength={100} autoComplete="off" role="combobox"
+          id="site-search" type="search" value={q} placeholder={t("Search products")} maxLength={100} autoComplete="off" role="combobox"
           aria-expanded={showPanel} aria-controls={listId} aria-autocomplete="list" aria-activedescendant={active >= 0 ? `${listId}-${active}` : undefined}
           onChange={(e) => { setQ(e.target.value); setOpen(true); }}
           onFocus={() => { setRecent(readRecent()); setOpen(true); }}
         />
-        {q && <button type="button" className="hsearch-clear" aria-label="Clear search" onClick={() => { setQ(""); setHits([]); }}><IconClose width={16} height={16} /></button>}
+        {q && <button type="button" className="hsearch-clear" aria-label={t("Clear search")} onClick={() => { setQ(""); setHits([]); }}><IconClose width={16} height={16} /></button>}
       </form>
       {showPanel && (
         <div className="hsearch-panel" id={listId} role="listbox">
           {term.length < 2 ? (
             <>
-              <div className="hsearch-label">Recent searches</div>
+              <div className="hsearch-label">{t("Recent searches")}</div>
               {recent.map((r) => <button key={r} type="button" role="option" aria-selected="false" className="hsearch-row" onClick={() => go(`/search?q=${encodeURIComponent(r)}`, r)}><IconSearch width={16} height={16} />{r}</button>)}
-              {categories.length > 0 && <div className="hsearch-label">Browse</div>}
+              {categories.length > 0 && <div className="hsearch-label">{t("Browse")}</div>}
               <div className="hsearch-chips">{categories.slice(0, 8).map((c) => <Link key={c.slug} href={`/category/${c.slug}`} className="chip">{c.name}</Link>)}</div>
             </>
           ) : (
             <>
-              {loading && hits.length === 0 && <div className="hsearch-empty">Searching…</div>}
-              {!loading && hits.length === 0 && <div className="hsearch-empty">No matches for “{term}”. Try a different word.</div>}
+              {loading && hits.length === 0 && <div className="hsearch-empty">{t("Searching…")}</div>}
+              {!loading && hits.length === 0 && <div className="hsearch-empty">{t("No matches for “{q}”. Try a different word.", { q: term })}</div>}
               {hits.map((h, i) => (
                 <Link key={h.id} id={`${listId}-${i}`} role="option" aria-selected={i === active} href={`/products/${h.slug}`} className={`hsearch-hit ${i === active ? "is-active" : ""}`} onClick={() => { saveRecent(term); setOpen(false); }}>
                   <span className="hsearch-thumb"><SmartImage src={h.image} alt="" width={96} height={96} /></span>
@@ -96,7 +98,7 @@ export function HeaderSearch({ categories }: { categories: { slug: string; name:
                   <span className="hsearch-price">{formatMoneyShort(h.minPriceMinor, h.currency)}</span>
                 </Link>
               ))}
-              {hits.length > 0 && <button type="button" className="hsearch-all" onClick={() => go(`/search?q=${encodeURIComponent(term)}`, term)}>See all results for “{term}”</button>}
+              {hits.length > 0 && <button type="button" className="hsearch-all" onClick={() => go(`/search?q=${encodeURIComponent(term)}`, term)}>{t("See all results for “{q}”", { q: term })}</button>}
             </>
           )}
         </div>

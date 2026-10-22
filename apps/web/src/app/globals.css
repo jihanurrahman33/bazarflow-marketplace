@@ -4,7 +4,7 @@
 html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0; background: var(--color-background); color: var(--color-text-primary);
-  font: var(--text-body)/1.5 system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Bengali", "Helvetica Neue", Arial, sans-serif;
+  font: var(--text-body)/1.5 system-ui, -apple-system, "Segoe UI", Roboto, var(--font-bn), "Noto Sans Bengali", "Helvetica Neue", Arial, sans-serif;
 }
 a { color: var(--color-primary); text-decoration: none; }
 a:hover { text-decoration: underline; }

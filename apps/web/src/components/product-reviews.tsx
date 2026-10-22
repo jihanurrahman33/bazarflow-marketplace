@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { api, messageFor } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import { useAction, useApi } from "@/lib/hooks";
+import { useT } from "./lang";
 import { useSession, useToast } from "./providers";
 import { Alert, Button, ConfirmDialog, Field, LoadMore, Stars } from "./ui";
 
@@ -38,6 +39,7 @@ const SORTS: { value: SortKey; label: string }[] = [{ value: "newest", label: "N
 const PAGE = 10;
 
 export function ProductReviews({ productSlug, productTitle, initialReviews, initialSummary, initialCursor = null }: Props) {
+  const t = useT();
   const { user, status } = useSession();
   const { toast } = useToast();
   const path = usePathname();
@@ -102,27 +104,27 @@ export function ProductReviews({ productSlug, productTitle, initialReviews, init
     <section aria-labelledby="reviews-heading" id="reviews" className="stack">
       <div className="row-between" style={{ alignItems: "center", flexWrap: "wrap", gap: "var(--space-md)" }}>
         <div>
-          <h2 id="reviews-heading" style={{ marginBottom: 4 }}>Customer reviews</h2>
+          <h2 id="reviews-heading" style={{ marginBottom: 4 }}>{t("Customer reviews")}</h2>
           <div className="row" style={{ alignItems: "center", gap: "var(--space-sm)" }}>
             {summary.count > 0 && <Stars value={summary.average} />}
             <span className="muted small">
               {summary.count > 0
-                ? `${summary.average} out of 5 · ${summary.count} ${summary.count === 1 ? "review" : "reviews"}`
-                : "No reviews yet"}
+                ? summary.count === 1 ? t("{avg} out of 5 · 1 review", { avg: summary.average ?? 0 }) : t("{avg} out of 5 · {n} reviews", { avg: summary.average ?? 0, n: summary.count })
+                : t("No reviews yet")}
             </span>
           </div>
         </div>
 
         <div>
           {status === "ready" && !user ? (
-            <Link href={`/login?next=${encodeURIComponent(path + "#reviews")}`} className="muted small">Bought this? Sign in to review</Link>
+            <Link href={`/login?next=${encodeURIComponent(path + "#reviews")}`} className="muted small">{t("Bought this? Sign in to review")}</Link>
           ) : user?.role === "customer" && eligibility.data ? (
             posted || eligibility.data.reason === "already_reviewed" ? (
-              <span className="muted small">You've reviewed this product</span>
+              <span className="muted small">{t("You've reviewed this product")}</span>
             ) : eligibility.data.canReview ? (
-              <Button size="sm" variant="primary" onClick={() => setWriting(true)}>Write a review</Button>
+              <Button size="sm" variant="primary" onClick={() => setWriting(true)}>{t("Write a review")}</Button>
             ) : (
-              <span className="muted small">Reviews open after your order is delivered</span>
+              <span className="muted small">{t("Reviews open after your order is delivered")}</span>
             )
           ) : null}
         </div>
@@ -141,9 +143,9 @@ export function ProductReviews({ productSlug, productTitle, initialReviews, init
             })}
           </div>
           <div className="review-sort">
-            <label htmlFor="review-sort" className="muted small">Sort by</label>
-            <select id="review-sort" className="input input-sm" value={sort} onChange={(e) => setSort(e.target.value as SortKey)}>{SORTS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
-            {filter && <button type="button" className="chip" onClick={() => setFilter(null)}>{filter}★ only ×</button>}
+            <label htmlFor="review-sort" className="muted small">{t("Sort by")}</label>
+            <select id="review-sort" className="input input-sm" value={sort} onChange={(e) => setSort(e.target.value as SortKey)}>{SORTS.map((o) => <option key={o.value} value={o.value}>{t(o.label)}</option>)}</select>
+            {filter && <button type="button" className="chip" onClick={() => setFilter(null)}>{t("{n}★ only ×", { n: filter })}</button>}
           </div>
         </div>
       )}
@@ -151,7 +153,7 @@ export function ProductReviews({ productSlug, productTitle, initialReviews, init
       {reviews.length === 0 && !busy ? (
         <div className="card" style={{ padding: "var(--space-xl)", textAlign: "center" }}>
           <p className="muted" style={{ marginBottom: 0 }}>
-            {filter ? `No ${filter}-star reviews.` : "No reviews yet. Only customers who purchased and received this product can leave a verified review."}
+            {filter ? t("No {n}-star reviews.", { n: filter }) : t("No reviews yet. Only customers who purchased and received this product can leave a verified review.")}
           </p>
         </div>
       ) : (
@@ -165,12 +167,12 @@ export function ProductReviews({ productSlug, productTitle, initialReviews, init
                 <span className="muted small">{formatDate(r.createdAt, { dateStyle: "medium" })}</span>
               </div>
               <p style={{ whiteSpace: "pre-line", marginBottom: 4 }}>{r.body}</p>
-              {r.reply && <div className="seller-reply"><strong className="small">Seller response</strong><p>{r.reply.body}</p></div>}
+              {r.reply && <div className="seller-reply"><strong className="small">{t("Seller response")}</strong><p>{r.reply.body}</p></div>}
               <div className="row" style={{ alignItems: "center", gap: "var(--space-xs)" }}>
                 <span className="muted small">{r.author}</span>
                 {r.verifiedPurchase && (
                   <span className="badge badge-success small" style={{ fontSize: "var(--text-caption)", padding: "2px 6px" }}>
-                    Verified purchase
+                    {t("Verified purchase")}
                   </span>
                 )}
               </div>

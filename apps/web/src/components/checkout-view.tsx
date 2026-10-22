@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { track } from "@/lib/track";
+import { useT } from "./lang";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError, messageFor, newIdempotencyKey } from "@/lib/api";
@@ -11,6 +12,7 @@ import type { Address, OrderView, Quote } from "./types";
 import { Alert, Button, EmptyState, ErrorPanel, ListSkeleton, Money } from "./ui";
 
 export function CheckoutView() {
+  const t = useT();
   const router = useRouter();
   const { setCartCount } = useSession();
   const addresses = useApi<Address[]>("/addresses");
@@ -73,49 +75,49 @@ export function CheckoutView() {
     <div className="split split-side">
       <div className="stack">
         <section className="card stack" aria-labelledby="ship">
-          <h2 id="ship">1. Delivery address</h2>
-          {(addresses.data?.length ?? 0) === 0 && !adding && <EmptyState title="Add your delivery address" action={<Button variant="primary" onClick={() => setAdding(true)}>Add address</Button>}>We deliver across Bangladesh.</EmptyState>}
+          <h2 id="ship">{t("1. Delivery address")}</h2>
+          {(addresses.data?.length ?? 0) === 0 && !adding && <EmptyState title={t("Add your delivery address")} action={<Button variant="primary" onClick={() => setAdding(true)}>{t("Add address")}</Button>}>{t("We deliver across Bangladesh.")}</EmptyState>}
           {addresses.data?.map((a) => (
             <label key={a.id} className="card row" style={{ alignItems: "flex-start", cursor: "pointer", borderColor: addressId === a.id ? "var(--color-primary)" : undefined }}>
               <input type="radio" name="address" checked={addressId === a.id} onChange={() => setAddressId(a.id)} />
               <span className="grow"><strong>{a.label}</strong> · {a.recipient}<br /><span className="muted small">{a.line1}{a.line2 ? `, ${a.line2}` : ""}, {a.city}, {a.district} {a.postalCode} · {a.phone}</span></span>
             </label>
           ))}
-          {adding ? <AddressForm onSaved={(a) => { setAdding(false); addresses.reload(); setAddressId(a.id); }} onCancel={() => setAdding(false)} /> : (addresses.data?.length ?? 0) > 0 && <div><Button size="sm" onClick={() => setAdding(true)}>+ New address</Button></div>}
+          {adding ? <AddressForm onSaved={(a) => { setAdding(false); addresses.reload(); setAddressId(a.id); }} onCancel={() => setAdding(false)} /> : (addresses.data?.length ?? 0) > 0 && <div><Button size="sm" onClick={() => setAdding(true)}>{t("+ New address")}</Button></div>}
         </section>
 
         <section className="card stack" aria-labelledby="pay">
-          <h2 id="pay">2. Payment</h2>
-          <label className="row"><input type="radio" name="pm" checked={method === "online"} onChange={() => setMethod("online")} /> <span><strong>Pay online</strong><br /><span className="muted small">You&apos;ll complete payment on the provider&apos;s secure page.</span></span></label>
-          {quote?.paymentMethods?.includes("cod") && <label className="row"><input type="radio" name="pm" checked={method === "cod"} onChange={() => setMethod("cod")} /> <span><strong>Cash on delivery</strong><br /><span className="muted small">Pay the courier when your order arrives.</span></span></label>}
+          <h2 id="pay">{t("2. Payment")}</h2>
+          <label className="row"><input type="radio" name="pm" checked={method === "online"} onChange={() => setMethod("online")} /> <span><strong>{t("Pay online")}</strong><br /><span className="muted small">{t("You'll complete payment on the provider's secure page.")}</span></span></label>
+          {quote?.paymentMethods?.includes("cod") && <label className="row"><input type="radio" name="pm" checked={method === "cod"} onChange={() => setMethod("cod")} /> <span><strong>{t("Cash on delivery")}</strong><br /><span className="muted small">{t("Pay the courier when your order arrives.")}</span></span></label>}
         </section>
       </div>
 
-      <aside className="card stack" aria-label="Order summary" style={{ alignSelf: "start" }}>
-        <h2>Order summary</h2>
+      <aside className="card stack" aria-label={t("Order summary")} style={{ alignSelf: "start" }}>
+        <h2>{t("Order summary")}</h2>
         {loadQuote.pending && !quote && <ListSkeleton rows={2} />}
         {quoteError && <Alert tone="danger">{messageFor(quoteError)}</Alert>}
-        {stale && <Alert tone="warning" title="Your order changed">Prices or stock changed, so we refreshed your summary. Review it and place your order again.</Alert>}
+        {stale && <Alert tone="warning" title={t("Your order changed")}>{t("Prices or stock changed, so we refreshed your summary. Review it and place your order again.")}</Alert>}
         {quote && (
           <>
             {quote.groups.map((g) => (
               <div key={g.vendorId}><strong className="small">{g.vendor.name}</strong>
                 {g.lines.map((l) => <div key={l.itemId} className="row-between small"><span>{l.quantity} × {l.title}</span><Money minor={l.lineTotalMinor} /></div>)}
-                <div className="row-between small muted"><span>Shipping</span><Money minor={g.shippingMinor} /></div>
+                <div className="row-between small muted"><span>{t("Shipping")}</span><Money minor={g.shippingMinor} /></div>
               </div>
             ))}
-            {quote.issues.length > 0 && <Alert tone="warning">Some items are unavailable. <Link href="/cart">Review your cart</Link></Alert>}
+            {quote.issues.length > 0 && <Alert tone="warning">{t("Some items are unavailable.")} <Link href="/cart">{t("Review your cart")}</Link></Alert>}
             <dl className="kv">
-              {quote.totals.discountMinor > 0 && <><dt>Discount{quote.coupon ? ` (${quote.coupon.code})` : ""}</dt><dd className="right discount-amt">−<Money minor={quote.totals.discountMinor} /></dd></>}
-              <dt><strong>Total</strong></dt><dd className="right"><strong><Money minor={quote.totals.totalMinor} /></strong></dd>
+              {quote.totals.discountMinor > 0 && <><dt>{quote.coupon ? t("Discount ({code})", { code: quote.coupon.code }) : t("Discount")}</dt><dd className="right discount-amt">−<Money minor={quote.totals.discountMinor} /></dd></>}
+              <dt><strong>{t("Total")}</strong></dt><dd className="right"><strong><Money minor={quote.totals.totalMinor} /></strong></dd>
             </dl>
           </>
         )}
         {place.error && !stale && <Alert tone="danger">{messageFor(place.error)}</Alert>}
         <Button variant="primary" block loading={place.pending} disabled={blocked || !addressId || loadQuote.pending} onClick={() => void place.run()}>
-          {method === "cod" ? "Place order" : "Continue to payment"}
+          {method === "cod" ? t("Place order") : t("Continue to payment")}
         </Button>
-        <p className="muted small">Clicking again after a connection problem is safe: your order is only created once.</p>
+        <p className="muted small">{t("Clicking again after a connection problem is safe: your order is only created once.")}</p>
       </aside>
     </div>
   );

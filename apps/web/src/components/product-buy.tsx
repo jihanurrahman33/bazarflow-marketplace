@@ -7,6 +7,7 @@ import { useAction } from "@/lib/hooks";
 import { formatMoney } from "@/lib/format";
 import { isColourOption, swatchFor } from "@/lib/option-presets";
 import { track } from "@/lib/track";
+import { useT } from "./lang";
 import { useSelection } from "./product-selection";
 import { useSession, useToast } from "./providers";
 import { Alert, Button, LinkButton } from "./ui";
@@ -15,6 +16,7 @@ interface Variant { variantId: string; optionValues: Record<string, string>; lab
 interface Props { productId: string; slug: string; currency: string; options: { name: string; values: string[] }[]; variants: Variant[] }
 
 export function ProductBuy({ productId, slug, currency, options, variants }: Props) {
+  const t = useT();
   const { user, status, setCartCount } = useSession();
   const { toast } = useToast();
   const path = usePathname();
@@ -37,7 +39,7 @@ export function ProductBuy({ productId, slug, currency, options, variants }: Pro
     if (!variant) return;
     const r = await api<{ itemCount: number }>("/cart/items", { method: "POST", body: { productId, variantId: variant.variantId, quantity: qty } });
     setCartCount(r.data.itemCount);
-    toast("Added to cart");
+    toast(t("Added to cart"));
     track({ type: "add_to_cart", productId });
   });
 
@@ -48,7 +50,7 @@ export function ProductBuy({ productId, slug, currency, options, variants }: Pro
   return (
     <div className="stack">
       <div>
-        <span className="price" style={{ fontSize: "var(--text-headline)" }}>{!variant && variants.length > 1 ? "From " : ""}{formatMoney(price, currency)}</span>
+        <span className="price" style={{ fontSize: "var(--text-headline)" }}>{!variant && variants.length > 1 ? t("From {price}", { price: formatMoney(price, currency) }) : formatMoney(price, currency)}</span>
         {variant?.compareAtMinor && variant.compareAtMinor > variant.priceMinor && (
           <>
             <span className="price-was">{formatMoney(variant.compareAtMinor, currency)}</span>
@@ -74,25 +76,25 @@ export function ProductBuy({ productId, slug, currency, options, variants }: Pro
         </fieldset>
       ))}
 
-      {variant && !variant.inStock && <Alert tone="warning">This option is out of stock.</Alert>}
-      {variant?.lowStock && <p className="small" style={{ color: "var(--color-warning)" }}>Only {variant.lowStock} left</p>}
+      {variant && !variant.inStock && <Alert tone="warning">{t("This option is out of stock.")}</Alert>}
+      {variant?.lowStock && <p className="small" style={{ color: "var(--color-warning)" }}>{t("Only {n} left", { n: variant.lowStock })}</p>}
 
       <div className="row">
-        <div className="qty" role="group" aria-label="Quantity">
-          <button type="button" aria-label="Decrease quantity" onClick={() => setQty((q) => Math.max(1, q - 1))}>−</button>
+        <div className="qty" role="group" aria-label={t("Quantity")}>
+          <button type="button" aria-label={t("Decrease quantity")} onClick={() => setQty((q) => Math.max(1, q - 1))}>−</button>
           <span aria-live="polite">{qty}</span>
-          <button type="button" aria-label="Increase quantity" onClick={() => setQty((q) => Math.min(maxQty, q + 1))}>+</button>
+          <button type="button" aria-label={t("Increase quantity")} onClick={() => setQty((q) => Math.min(maxQty, q + 1))}>+</button>
         </div>
         {status === "ready" && !user ? (
-          <LinkButton href={`/login?next=${encodeURIComponent(path)}`} variant="primary">Sign in to buy</LinkButton>
+          <LinkButton href={`/login?next=${encodeURIComponent(path)}`} variant="primary">{t("Sign in to buy")}</LinkButton>
         ) : user && user.role !== "customer" ? (
-          <span className="muted small">Sign in with a customer account to buy.</span>
+          <span className="muted small">{t("Sign in with a customer account to buy.")}</span>
         ) : (
           <Button variant="primary" className="btn-cta" onClick={() => void add.run()} loading={add.pending} disabled={!canBuy}>
-            {options.length > 0 && !variant ? "Select options" : canBuy ? "Add to cart" : "Unavailable"}
+            {options.length > 0 && !variant ? t("Select options") : canBuy ? t("Add to cart") : t("Unavailable")}
           </Button>
         )}
-        {user?.role === "customer" && <Link href="/cart" className="small">View cart</Link>}
+        {user?.role === "customer" && <Link href="/cart" className="small">{t("View cart")}</Link>}
       </div>
       {add.error && <Alert tone="danger">{messageFor(add.error)}</Alert>}
       <span className="sr-only">{slug}</span>

@@ -3,6 +3,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { api, messageFor } from "@/lib/api";
 import { IconHeart } from "./icons";
+import { useT } from "./lang";
 import { useSession, useToast } from "./providers";
 
 interface WishlistApi { saved: (id: string) => boolean; toggle: (id: string) => Promise<void>; count: number; enabled: boolean }
@@ -13,6 +14,7 @@ export const useWishlist = () => useContext(Ctx);
 export function WishlistProvider({ children }: { children: ReactNode }) {
   const { user } = useSession();
   const { toast } = useToast();
+  const t = useT();
   const router = useRouter();
   const path = usePathname();
   const [ids, setIds] = useState<Set<string>>(new Set());
@@ -31,12 +33,12 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     setIds((s) => { const n = new Set(s); if (had) n.delete(id); else n.add(id); return n; });
     try {
       await api(`/me/wishlist/${id}`, { method: had ? "DELETE" : "PUT", ...(had ? {} : { body: {} }) });
-      if (!had) toast("Saved. We'll tell you if the price drops.");
+      if (!had) toast(t("Saved. We'll tell you if the price drops."));
     } catch (e) {
       setIds((s) => { const n = new Set(s); if (had) n.add(id); else n.delete(id); return n; });
       toast(messageFor(e));
     }
-  }, [ids, user, router, path, toast]);
+  }, [ids, user, router, path, toast, t]);
 
   const value = useMemo<WishlistApi>(() => ({ saved: (id) => ids.has(id), toggle, count: ids.size, enabled: !user || customer }), [ids, toggle, user, customer]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
@@ -44,11 +46,12 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
 
 /** Heart on a product card or page. Hidden for seller and admin accounts, which cannot save items. */
 export function WishButton({ productId, title, className = "wish-btn" }: { productId: string; title?: string; className?: string }) {
+  const t = useT();
   const { saved, toggle, enabled } = useWishlist();
   if (!enabled) return null;
   const on = saved(productId);
   return (
-    <button type="button" className={className} aria-pressed={on} aria-label={on ? `Remove ${title ?? "item"} from saved items` : `Save ${title ?? "item"} for later`} onClick={(e) => { e.preventDefault(); e.stopPropagation(); void toggle(productId); }}>
+    <button type="button" className={className} aria-pressed={on} aria-label={on ? t("Remove {title} from saved items", { title: title ?? "" }) : t("Save {title} for later", { title: title ?? "" })} onClick={(e) => { e.preventDefault(); e.stopPropagation(); void toggle(productId); }}>
       <IconHeart width={18} height={18} />
     </button>
   );

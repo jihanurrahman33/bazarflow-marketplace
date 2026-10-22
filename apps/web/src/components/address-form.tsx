@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { api, messageFor } from "@/lib/api";
 import { useAction } from "@/lib/hooks";
+import { canonicalDistrict, DIVISIONS } from "@/lib/bd-geo";
 import type { Address } from "./types";
 import { Alert, Button, Field, fieldMessage } from "./ui";
 
@@ -28,7 +29,12 @@ export function AddressForm({ onSaved, onCancel, initial }: { onSaved: (a: Addre
       <Field label="Address line 2 (optional)">{(p) => <input {...p} className="input" autoComplete="address-line2" value={f.line2 ?? ""} onChange={set("line2")} />}</Field>
       <div className="form-grid">
         <Field label="City" error={err("city")}>{(p) => <input {...p} className="input" autoComplete="address-level2" value={f.city} onChange={set("city")} required />}</Field>
-        <Field label="District" error={err("district")}>{(p) => <input {...p} className="input" value={f.district} onChange={set("district")} required />}</Field>
+        <Field label="District" error={err("district")}>{(p) => (
+          <select {...p} className="input" autoComplete="address-level1" value={canonicalDistrict(f.district) ?? f.district} onChange={set("district")} required>
+            <option value="">Select a district…</option>
+            {Object.entries(DIVISIONS).map(([division, list]) => <optgroup key={division} label={`${division} division`}>{list.map((d) => <option key={d} value={d}>{d}</option>)}</optgroup>)}
+          </select>
+        )}</Field>
         <Field label="Postal code" hint="4 digits" error={err("postalCode")}>{(p) => <input {...p} className="input" inputMode="numeric" autoComplete="postal-code" maxLength={4} value={f.postalCode} onChange={set("postalCode")} required />}</Field>
       </div>
       <div className="row"><Button type="submit" variant="primary" loading={save.pending}>Save address</Button>{onCancel && <Button onClick={onCancel}>Cancel</Button>}</div>
