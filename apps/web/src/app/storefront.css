@@ -531,3 +531,5 @@ main a:not(.btn):not(.pcard):not(.chip):not(.cat-chip):not(.store-chip):not(.see
 .swatch-btn:hover { box-shadow: 0 0 0 2px var(--color-text-secondary); }
 .swatch-btn[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--color-text-primary); }
 .swatch-btn:disabled { opacity: 0.35; cursor: not-allowed; background-image: linear-gradient(135deg, transparent 46%, var(--color-text-secondary) 46%, var(--color-text-secondary) 54%, transparent 54%); }
+.variant-part + .variant-part::before { content: "/"; color: var(--color-text-secondary); margin-right: 12px; margin-left: -4px; }
+td input.mono { min-width: 190px; }

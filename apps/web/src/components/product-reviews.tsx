@@ -72,7 +72,7 @@ export function ProductReviews({ productSlug, productTitle, initialReviews, init
         <div>
           <h2 id="reviews-heading" style={{ marginBottom: 4 }}>Customer reviews</h2>
           <div className="row" style={{ alignItems: "center", gap: "var(--space-sm)" }}>
-            <Stars value={summary.average} />
+            {summary.count > 0 && <Stars value={summary.average} />}
             <span className="muted small">
               {summary.count > 0
                 ? `${summary.average} out of 5 · ${summary.count} ${summary.count === 1 ? "review" : "reviews"}`
