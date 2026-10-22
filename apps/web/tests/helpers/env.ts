@@ -12,6 +12,7 @@ export const TEST_ENV_SOURCE = {
   PAYMENT_MODE: "sandbox",
   STOCK_RESERVATION_TTL_MINUTES: "30",
   DEFAULT_COMMISSION_BPS: "1000",
+  COD_ENABLED: "true",
 } as const;
 
 export function useTestEnv(overrides: Record<string, string> = {}) {

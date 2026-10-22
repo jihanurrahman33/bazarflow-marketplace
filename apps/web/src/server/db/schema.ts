@@ -195,7 +195,7 @@ export interface AddressDoc {
 
 export type PaymentMethod = "online" | "cod";
 export type OrderStatus =
-  | "pending_payment" | "paid" | "processing" | "partially_fulfilled" | "shipped"
+  | "pending_payment" | "confirmed" | "processing" | "partially_fulfilled" | "shipped"
   | "delivered" | "cancelled" | "closed";
 export type PaymentSummaryStatus = "none" | "pending" | "paid" | "failed" | "refunded" | "partially_refunded" | "cod_pending";
 

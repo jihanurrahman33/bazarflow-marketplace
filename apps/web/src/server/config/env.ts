@@ -24,6 +24,8 @@ const schema = z
     CLOUDINARY_API_SECRET: z.string().optional(),
     STOCK_RESERVATION_TTL_MINUTES: z.coerce.number().int().min(1).max(1440).default(30),
     DEFAULT_COMMISSION_BPS: z.coerce.number().int().min(0).max(10000).default(1000),
+    /** Cash on delivery is opt-in: only enable once operations can actually collect and reconcile cash. */
+    COD_ENABLED: z.enum(["true", "false"]).default("false").transform((v) => v === "true"),
   })
   .superRefine((env, ctx) => {
     if (env.PAYMENT_PROVIDER === "mock" && env.PAYMENT_MODE === "live") {
