@@ -1999,6 +1999,47 @@
         }
       }
     },
+    "/api/v1/auth/step-up": {
+      "post": {
+        "operationId": "auth.step_up",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [],
+        "x-rate-limit": {
+          "limit": 5,
+          "windowSeconds": 900,
+          "by": "actor"
+        },
+        "responses": {
+          "2XX": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/auth/verify-contact": {
       "post": {
         "operationId": "auth.verify_contact",

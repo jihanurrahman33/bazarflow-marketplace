@@ -63,7 +63,13 @@ async function send(path: string, opts: RequestOptions): Promise<Response> {
   }
 }
 
-export async function api<T = unknown>(path: string, opts: RequestOptions = {}): Promise<{ data: T; meta: ApiMeta }> {
+/** Registered by the UI: asks the user for their password and resolves true once the server accepted it. */
+let stepUpHandler: (() => Promise<boolean>) | null = null;
+export const setStepUpHandler = (fn: (() => Promise<boolean>) | null): void => {
+  stepUpHandler = fn;
+};
+
+export async function api<T = unknown>(path: string, opts: RequestOptions = {}, steppedUp = false): Promise<{ data: T; meta: ApiMeta }> {
   let res = await send(path, opts);
   if (res.status === 401 && !path.startsWith("/auth/")) {
     const peek = await res.clone().json().catch(() => ({}));
@@ -74,6 +80,8 @@ export async function api<T = unknown>(path: string, opts: RequestOptions = {}):
   const json = await res.json().catch(() => null);
   if (!res.ok || json?.error) {
     const e = json?.error;
+    // High-risk admin action: confirm the password once, then retry the SAME request (it was rejected before running).
+    if (e?.code === "STEP_UP_REQUIRED" && !steppedUp && stepUpHandler && (await stepUpHandler())) return api<T>(path, opts, true);
     throw new ApiError(res.status, e?.code ?? "INTERNAL", e?.message ?? "Something went wrong.", e?.details ?? [], e?.requestId);
   }
   return { data: json.data as T, meta: (json.meta ?? {}) as ApiMeta };
@@ -97,6 +105,7 @@ const COPY: Record<string, string> = {
   IDEMPOTENCY_IN_PROGRESS: "We are still processing your request. Please wait a moment.",
   VENDOR_NOT_ACTIVE: "This store is not active right now.",
   FORBIDDEN: "You do not have permission to do that.",
+  STEP_UP_REQUIRED: "Confirm your password to continue.",
   NETWORK: "You appear to be offline. Check your connection and try again.",
   TIMEOUT: "The request timed out. Please try again.",
   ACCOUNT_SUSPENDED: "This account is suspended. Contact support.",

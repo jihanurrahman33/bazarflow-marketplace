@@ -1,6 +1,7 @@
 "use client";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, messageFor, setStepUpHandler } from "@/lib/api";
+import { Alert, Button, Dialog, Field } from "./ui";
 
 export interface SessionUser {
   id: string;
@@ -40,6 +41,10 @@ export function Providers({ children }: { children: ReactNode }) {
   const [cartCount, setCartCount] = useState(0);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [online, setOnline] = useState(true);
+  const [stepUp, setStepUp] = useState<{ resolve: (ok: boolean) => void } | null>(null);
+  const [suPassword, setSuPassword] = useState("");
+  const [suError, setSuError] = useState<string>();
+  const [suPending, setSuPending] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -73,6 +78,25 @@ export function Providers({ children }: { children: ReactNode }) {
     };
   }, [refresh]);
 
+  useEffect(() => {
+    setStepUpHandler(() => new Promise<boolean>((resolve) => { setSuPassword(""); setSuError(undefined); setStepUp({ resolve }); }));
+    return () => setStepUpHandler(null);
+  }, []);
+  const submitStepUp = async () => {
+    setSuPending(true);
+    setSuError(undefined);
+    try {
+      await api("/auth/step-up", { method: "POST", body: { password: suPassword } });
+      stepUp?.resolve(true);
+      setStepUp(null);
+    } catch (e) {
+      setSuError(messageFor(e));
+    } finally {
+      setSuPending(false);
+    }
+  };
+  const cancelStepUp = () => { stepUp?.resolve(false); setStepUp(null); };
+
   const toast = useCallback((text: string, tone: Toast["tone"] = "info") => {
     const id = Date.now() + Math.random();
     setToasts((t) => [...t, { id, text, tone }]);
@@ -87,6 +111,14 @@ export function Providers({ children }: { children: ReactNode }) {
       <ToastCtx.Provider value={toastValue}>
         {!online && <div className="offline-banner" role="status">You are offline. Changes will not be saved until you reconnect.</div>}
         {children}
+        <Dialog open={!!stepUp} onClose={cancelStepUp} title="Confirm your password">
+          <form className="stack" onSubmit={(e) => { e.preventDefault(); void submitStepUp(); }}>
+            <p className="muted">This action moves money or changes settings, so we need you to confirm it&apos;s really you.</p>
+            {suError && <Alert tone="danger">{suError}</Alert>}
+            <Field label="Password">{(p) => <input {...p} className="input" type="password" autoComplete="current-password" autoFocus required value={suPassword} onChange={(e) => setSuPassword(e.target.value)} />}</Field>
+            <div className="row" style={{ justifyContent: "flex-end" }}><Button onClick={cancelStepUp} disabled={suPending}>Cancel</Button><Button type="submit" variant="primary" loading={suPending}>Confirm</Button></div>
+          </form>
+        </Dialog>
         <div className="toasts" role="status" aria-live="polite">
           {toasts.map((t) => <div key={t.id} className={`toast ${t.tone === "danger" ? "toast-danger" : ""}`}>{t.text}</div>)}
         </div>

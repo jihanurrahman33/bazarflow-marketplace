@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { created, ok, page, route } from "@/server/api/route";
-import { requirePermission, requireRole, requireVendor } from "@/server/modules/authorization/actor";
+import { requirePermission, requireRole, requireStepUp, requireVendor } from "@/server/modules/authorization/actor";
 import { parseObjectId } from "@/server/shared/ids";
 import { pageQuery } from "@/server/shared/pagination";
 import { getOrderForSupport, salesSummary, searchOrders } from "@/server/modules/admin/ops";
@@ -59,6 +59,7 @@ export const adminPayoutsHandler = route({ name: "admin.payouts.list" }, async (
 
 export const approvePayoutHandler = route<{ id: string }>({ name: "admin.payouts.approve" }, async (ctx) => {
   requirePermission(ctx.actor, "payout.approve");
+  requireStepUp(ctx.actor);
   return ok(await approvePayout(ctx.actor, parseObjectId(ctx.params.id), ctx.requestId));
 });
 export const rejectPayoutHandler = route<{ id: string }>({ name: "admin.payouts.reject" }, async (ctx) => {
@@ -68,11 +69,13 @@ export const rejectPayoutHandler = route<{ id: string }>({ name: "admin.payouts.
 });
 export const markPaidHandler = route<{ id: string }>({ name: "admin.payouts.paid" }, async (ctx) => {
   requirePermission(ctx.actor, "payout.approve");
+  requireStepUp(ctx.actor);
   const b = await ctx.body(z.strictObject({ providerRef: z.string().trim().min(4).max(80) }));
   return ok(await markPayoutPaid(ctx.actor, parseObjectId(ctx.params.id), b.providerRef, ctx.requestId));
 });
 export const markFailedHandler = route<{ id: string }>({ name: "admin.payouts.failed" }, async (ctx) => {
   requirePermission(ctx.actor, "payout.approve");
+  requireStepUp(ctx.actor);
   const b = await ctx.body(z.strictObject({ reason: z.string().trim().min(3).max(300) }));
   return ok(await markPayoutFailed(ctx.actor, parseObjectId(ctx.params.id), b.reason, ctx.requestId));
 });

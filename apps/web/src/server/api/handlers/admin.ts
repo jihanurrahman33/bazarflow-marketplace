@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { ok, page, route } from "@/server/api/route";
-import { requirePermission } from "@/server/modules/authorization/actor";
+import { requirePermission, requireStepUp } from "@/server/modules/authorization/actor";
 import { parseObjectId } from "@/server/shared/ids";
 import { pageQuery } from "@/server/shared/pagination";
 import { listAuditLogs, listUsers, setUserStatus } from "@/server/modules/identity/admin";
@@ -54,6 +54,7 @@ export const reinstateVendorHandler = route<{ id: string }>({ name: "admin.vendo
 
 export const commissionHandler = route<{ id: string }>({ name: "admin.vendors.commission" }, async (ctx) => {
   requirePermission(ctx.actor, "settings.manage");
+  requireStepUp(ctx.actor);
   const b = await ctx.body(z.strictObject({ commissionBps: z.number().int().min(0).max(5000), reason: reason.shape.reason }));
   return ok(await setVendorCommission(ctx.actor, parseObjectId(ctx.params.id), b.commissionBps, b.reason, ctx.requestId));
 });

@@ -176,3 +176,30 @@ describe("UI states (server-rendered markup)", () => {
     expect(html).toContain('alt=""');
   });
 });
+
+describe("step-up retry", () => {
+  it("asks for the password once and retries the rejected request, never looping", async () => {
+    const { setStepUpHandler } = await import("@/lib/api");
+    let attempts = 0;
+    vi.stubGlobal("fetch", vi.fn(async () => {
+      attempts++;
+      return attempts === 1 ? json(403, { error: { code: "STEP_UP_REQUIRED", message: "x", requestId: "r" } }) : json(200, { data: { approved: true } });
+    }));
+    const handler = vi.fn(async () => true);
+    setStepUpHandler(handler);
+    expect((await api<{ approved: boolean }>("/admin/payouts/1/approve", { method: "POST", body: {} })).data.approved).toBe(true);
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(attempts).toBe(2);
+
+    // if the server still demands step-up after we complied, surface the error instead of prompting again
+    attempts = 0;
+    vi.stubGlobal("fetch", vi.fn(async () => json(403, { error: { code: "STEP_UP_REQUIRED", message: "x", requestId: "r" } })));
+    expect(await api("/admin/payouts/1/approve", { method: "POST", body: {} }).catch((x) => x)).toMatchObject({ code: "STEP_UP_REQUIRED" });
+    expect(handler).toHaveBeenCalledTimes(2);
+
+    // user cancels the prompt: the original error is returned
+    setStepUpHandler(async () => false);
+    expect(await api("/x", { method: "POST", body: {} }).catch((x) => x)).toMatchObject({ code: "STEP_UP_REQUIRED" });
+    setStepUpHandler(null);
+  });
+});

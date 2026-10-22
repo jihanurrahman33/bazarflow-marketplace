@@ -4,7 +4,7 @@ import { ok, page, route, created } from "@/server/api/route";
 import { AppError } from "@/server/shared/errors";
 import { parseObjectId } from "@/server/shared/ids";
 import { pageQuery } from "@/server/shared/pagination";
-import { requirePermission, requireRole, requireVendor } from "@/server/modules/authorization/actor";
+import { requirePermission, requireRole, requireStepUp, requireVendor } from "@/server/modules/authorization/actor";
 import { getAdapterForWebhook } from "@/server/modules/payments/registry";
 import { ProviderError } from "@/server/modules/payments/types";
 import { adminReconcile, applyVerifiedEvent, getPaymentForOrder, initiatePayment, listReconciliationQueue, refreshOrderPayment } from "@/server/modules/payments/service";
@@ -95,6 +95,7 @@ export const adminRequestRefundHandler = route(
 
 export const adminApproveRefundHandler = route<{ id: string }>({ name: "admin.refunds.approve" }, async (ctx) => {
   requirePermission(ctx.actor, "refund.approve");
+  requireStepUp(ctx.actor);
   return ok(await approveRefund(ctx.actor, parseObjectId(ctx.params.id), ctx.requestId));
 });
 
@@ -106,6 +107,7 @@ export const adminRejectRefundHandler = route<{ id: string }>({ name: "admin.ref
 
 export const adminRetryRefundHandler = route<{ id: string }>({ name: "admin.refunds.retry" }, async (ctx) => {
   requirePermission(ctx.actor, "refund.approve");
+  requireStepUp(ctx.actor);
   return ok(await retryRefund(ctx.actor, parseObjectId(ctx.params.id), ctx.requestId));
 });
 

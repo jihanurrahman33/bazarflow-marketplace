@@ -34,6 +34,8 @@ export interface SessionDoc {
   expiresAt: Date;
   lastUsedAt: Date;
   rotatedAt?: Date;
+  /** Last time the user re-entered their password for a high-risk action in this session. */
+  stepUpAt?: Date;
   revokedAt?: Date;
   revokedReason?: "logout" | "logout_all" | "reuse_detected" | "password_reset" | "suspended" | "admin";
 }

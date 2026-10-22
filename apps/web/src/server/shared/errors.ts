@@ -8,6 +8,7 @@ export const ErrorCodes = {
   REFRESH_TOKEN_INVALID: { status: 401, message: "The session is no longer valid." },
   FORBIDDEN: { status: 403, message: "You are not allowed to perform this action." },
   ACCOUNT_SUSPENDED: { status: 403, message: "This account is suspended." },
+  STEP_UP_REQUIRED: { status: 403, message: "Please confirm your password to continue." },
   ORIGIN_NOT_ALLOWED: { status: 403, message: "Request origin is not allowed." },
   NOT_FOUND: { status: 404, message: "The resource was not found." },
   CONFLICT: { status: 409, message: "The request conflicts with the current state." },

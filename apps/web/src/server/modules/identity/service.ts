@@ -8,7 +8,7 @@ import { AppError } from "@/server/shared/errors";
 import { hmacHex, newId, randomToken, safeEqual } from "@/server/shared/ids";
 import { writeAudit } from "@/server/modules/audit/audit";
 import { getMailer } from "@/server/modules/notifications/mailer";
-import type { Actor } from "@/server/modules/authorization/actor";
+import { STEP_UP_WINDOW_MS, type Actor } from "@/server/modules/authorization/actor";
 import { dummyHash, hashPassword, verifyPassword } from "./password";
 import { hashRefreshToken, newRefreshToken, signAccessToken, verifyAccessToken } from "./tokens";
 
@@ -223,6 +223,7 @@ export async function refresh(refreshToken: string, device?: DeviceInfo): Promis
       {
         _id: newId(), userId: session.userId, familyId: session.familyId, tokenHash: hashRefreshToken(next),
         device: device ?? session.device, createdAt: now, expiresAt: session.expiresAt, lastUsedAt: now,
+        ...(session.stepUpAt ? { stepUpAt: session.stepUpAt } : {}), // still bound by the 5-minute window
       },
       { session: tx },
     );
@@ -355,7 +356,7 @@ export async function authenticateAccessToken(token: string): Promise<Actor> {
   const userId = new ObjectId(claims.sub);
   const [user, live] = await Promise.all([
     c.users.findOne({ _id: userId }, { projection: { role: 1, permissions: 1, vendorId: 1, status: 1, emailVerifiedAt: 1 } }),
-    c.sessions.findOne({ familyId: claims.sid, userId, revokedAt: { $exists: false } }, { projection: { _id: 1 } }),
+    c.sessions.findOne({ familyId: claims.sid, userId, revokedAt: { $exists: false } }, { projection: { _id: 1, stepUpAt: 1 }, sort: { createdAt: -1 } }),
   ]);
   if (!user || !live) throw new AppError("UNAUTHENTICATED");
   if (user.status !== "active") throw new AppError("ACCOUNT_SUSPENDED");
@@ -366,5 +367,16 @@ export async function authenticateAccessToken(token: string): Promise<Actor> {
     vendorId: user.vendorId,
     sessionId: claims.sid,
     emailVerified: !!user.emailVerifiedAt,
+    stepUpAt: live.stepUpAt,
   };
+}
+
+/** Re-verify the password and mark this session as recently re-authenticated. */
+export async function stepUp(userId: ObjectId, familyId: string, password: string): Promise<{ expiresInSeconds: number }> {
+  const c = await getCollections();
+  const user = await c.users.findOne({ _id: userId });
+  if (!user || !(await verifyPassword(user.passwordHash, password))) throw new AppError("INVALID_CREDENTIALS");
+  await c.sessions.updateMany({ userId, familyId, revokedAt: { $exists: false } }, { $set: { stepUpAt: new Date() } });
+  await writeAudit({ actorId: userId, actorRole: user.role, action: "auth.step_up", resourceType: "session", resourceId: familyId });
+  return { expiresInSeconds: STEP_UP_WINDOW_MS / 1000 };
 }

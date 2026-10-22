@@ -30,6 +30,8 @@ export async function makeUser(opts: { role?: Role; permissions?: readonly strin
     emailVerifiedAt: opts.verified === false ? undefined : now, vendorId: opts.vendorId, createdAt: now, updatedAt: now,
   });
   const { tokens } = await login({ email, password: PASSWORD, device: { platform: "android" } });
+  // Admins in tests have recently re-authenticated; step-up behaviour itself is covered in stepup.test.ts.
+  if (opts.role === "admin") await c.sessions.updateMany({ userId: _id }, { $set: { stepUpAt: new Date() } });
   return { id: _id, email, token: tokens.accessToken, refreshToken: tokens.refreshToken };
 }
 

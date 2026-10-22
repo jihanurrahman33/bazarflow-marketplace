@@ -4,7 +4,7 @@ import { getEnv } from "@/server/config/env";
 import { AppError } from "@/server/shared/errors";
 import {
   changePassword, forgotPassword, getProfile, listSessions, login, logoutAll, logoutByRefreshToken, refresh,
-  registerUser, resendVerification, resetPassword, revokeSession, updateProfile, verifyContact, type TokenPair, type UserDto,
+  registerUser, resendVerification, stepUp, resetPassword, revokeSession, updateProfile, verifyContact, type TokenPair, type UserDto,
 } from "@/server/modules/identity/service";
 
 const email = z.email().max(254);
@@ -109,6 +109,14 @@ export const resetPasswordHandler = route(
     const b = await ctx.body(z.strictObject({ email, code: z.string().regex(/^\d{6}$/), newPassword: password }));
     await resetPassword(b);
     return noContent();
+  },
+);
+
+export const stepUpHandler = route(
+  { name: "auth.step_up", rateLimit: { rule: { name: "auth.step_up", limit: 5, windowSeconds: 900 }, by: "actor" } },
+  async (ctx) => {
+    const b = await ctx.body(z.strictObject({ password: z.string().min(1).max(128) }));
+    return ok(await stepUp(ctx.actor.userId, ctx.actor.sessionId, b.password));
   },
 );
 
