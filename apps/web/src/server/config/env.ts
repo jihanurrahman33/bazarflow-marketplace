@@ -47,6 +47,13 @@ const schema = z
     /** Raw questions are NOT logged unless a documented purpose/consent/retention plan exists. */
     SUPPORT_LOG_QUESTIONS: z.enum(["true", "false"]).default("false").transform((v) => v === "true"),
     /** Outbound email via any SMTP server, e.g. smtps://user:pass@smtp.example.com:465 . Unset = emails are NOT sent. */
+    /** Social sign-in through Firebase Auth. The ID token is verified on OUR server; Firebase's web config below is public by design. */
+    FIREBASE_PROJECT_ID: z.string().min(3).optional(),
+    FIREBASE_WEB_API_KEY: z.string().min(10).optional(),
+    FIREBASE_AUTH_DOMAIN: z.string().min(3).optional(),
+    FIREBASE_WEB_APP_ID: z.string().min(3).optional(),
+    /** Comma-separated Firebase provider ids to offer. */
+    FIREBASE_SIGN_IN_PROVIDERS: z.string().default("google.com,apple.com,facebook.com"),
     SMTP_URL: z.string().optional(),
     MAIL_FROM: z.string().min(5).default("BazarFlow <no-reply@bazarflow.example>"),
     /** Firebase service-account JSON (as a string) for server-side push. Unset = push is NOT sent (inbox still works). */

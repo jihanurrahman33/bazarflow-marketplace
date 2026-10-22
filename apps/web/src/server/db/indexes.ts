@@ -7,6 +7,7 @@ type Spec = Record<string, IndexDescription[]>;
 export const INDEXES: Spec = {
   [C.users]: [
     { key: { emailNormalized: 1 }, unique: true, name: "uq_users_email" },
+    { key: { "identities.provider": 1, "identities.subject": 1 }, unique: true, name: "uq_users_identity", partialFilterExpression: { "identities.subject": { $exists: true } } },
     { key: { role: 1, status: 1, createdAt: -1 }, name: "ix_users_role_status" },
     { key: { vendorId: 1 }, name: "ix_users_vendor", partialFilterExpression: { vendorId: { $exists: true } } },
   ],

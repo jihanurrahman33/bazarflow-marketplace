@@ -9,6 +9,7 @@ import { hmacHex, newId, randomToken, safeEqual } from "@/server/shared/ids";
 import { writeAudit } from "@/server/modules/audit/audit";
 import { getMailer } from "@/server/modules/notifications/mailer";
 import { STEP_UP_WINDOW_MS, type Actor } from "@/server/modules/authorization/actor";
+import { enabledProviders, verifyFirebaseIdToken } from "./firebase";
 import { dummyHash, hashPassword, verifyPassword } from "./password";
 import { hashRefreshToken, newRefreshToken, signAccessToken, verifyAccessToken } from "./tokens";
 
@@ -392,4 +393,75 @@ export async function stepUp(userId: ObjectId, familyId: string, password: strin
   await c.sessions.updateMany({ userId, familyId, revokedAt: { $exists: false } }, { $set: { stepUpAt: new Date() } });
   await writeAudit({ actorId: userId, actorRole: user.role, action: "auth.step_up", resourceType: "session", resourceId: familyId });
   return { expiresInSeconds: STEP_UP_WINDOW_MS / 1000 };
+}
+
+// ---------- social sign-in (Firebase) ----------
+
+/**
+ * Sign in or sign up with Google / Apple / Facebook. The client gets a Firebase ID token; we verify it ourselves and then
+ * issue our own session, so everything downstream (roles, step-up, revocation, audit) is unchanged.
+ *
+ * Account-takeover rules: an identity is linked to an existing account only when the provider vouches for the email
+ * (email_verified). If that account's own email was never verified, it may have been pre-registered by someone else, so
+ * its password is discarded and its sessions revoked on linking. Admin accounts never sign in this way.
+ */
+export async function socialLogin(input: { idToken: string; device: DeviceInfo }) {
+  const identity = await verifyFirebaseIdToken(input.idToken);
+  if (!enabledProviders().includes(identity.provider)) {
+    throw new AppError("BUSINESS_RULE_VIOLATION", { message: "That sign-in method is not available." });
+  }
+  const c = await getCollections();
+  const now = new Date();
+  const staffOnly = (u: UserDoc) => {
+    if (u.role === "admin") throw new AppError("FORBIDDEN", { message: "Administrator accounts must sign in with a password." });
+    if (u.status !== "active") throw new AppError("ACCOUNT_SUSPENDED");
+  };
+
+  // 1) A returning social user: matched on the provider's stable subject, not on the (changeable) email.
+  let user = await c.users.findOne({ identities: { $elemMatch: { provider: identity.provider, subject: identity.subject } } });
+  if (user) staffOnly(user);
+
+  if (!user) {
+    if (!identity.email || !identity.emailVerified) {
+      throw new AppError("BUSINESS_RULE_VIOLATION", { message: "Your account has no verified email address, so we can't create or link a BazarFlow account. Sign up with email instead." });
+    }
+    const emailNormalized = normalizeEmail(identity.email);
+    const link = { provider: identity.provider, subject: identity.subject, email: identity.email, linkedAt: now };
+    const existing = await c.users.findOne({ emailNormalized });
+    if (existing) {
+      // 2) Same verified email as an existing account: link it.
+      staffOnly(existing);
+      const unverifiedLocal = !existing.emailVerifiedAt;
+      await c.users.updateOne(
+        { _id: existing._id },
+        {
+          $push: { identities: link },
+          $set: { updatedAt: now, emailVerifiedAt: existing.emailVerifiedAt ?? now, ...(unverifiedLocal ? { passwordHash: await hashPassword(randomToken(32)) } : {}) },
+        },
+      );
+      if (unverifiedLocal) await revokeAllSessionsForUser(existing._id, "admin");
+      await writeAudit({ actorId: existing._id, actorRole: existing.role, action: "auth.social_link", resourceType: "user", resourceId: existing._id.toHexString(), after: { provider: identity.provider, neutralisedUnverifiedPassword: unverifiedLocal } });
+      user = (await c.users.findOne({ _id: existing._id }))!;
+    } else {
+      // 3) A new customer. The password is random and discarded: they can set one later via "forgot password".
+      const doc: UserDoc = {
+        _id: newId(), email: identity.email.trim(), emailNormalized, passwordHash: await hashPassword(randomToken(32)),
+        name: (identity.name?.trim() || identity.email.split("@")[0]!).slice(0, 80), role: "customer", permissions: [], status: "active",
+        emailVerifiedAt: now, identities: [link], failedLoginCount: 0, createdAt: now, updatedAt: now,
+      };
+      try {
+        await c.users.insertOne(doc);
+        user = doc;
+      } catch (e) {
+        if (e instanceof MongoServerError && e.code === 11000) throw new AppError("CONFLICT", { message: "Please try signing in again." });
+        throw e;
+      }
+    }
+  }
+
+  const tokens = await issueSession(user, input.device);
+  if (user.role === "vendor") {
+    await writeAudit({ actorId: user._id, actorRole: user.role, action: "auth.login", resourceType: "user", resourceId: user._id.toHexString(), after: { via: identity.provider } });
+  }
+  return { user: toUserDto(user), tokens };
 }

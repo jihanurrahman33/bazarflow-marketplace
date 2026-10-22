@@ -7,13 +7,18 @@ import { NextResponse, type NextRequest } from "next/server";
 export function proxy(req: NextRequest) {
   const nonce = btoa(crypto.randomUUID());
   const dev = process.env.NODE_ENV !== "production";
+  // Firebase sign-in popups: only allowed when Firebase is configured, and only for Firebase's own hosts.
+  const fbDomain = process.env.FIREBASE_AUTH_DOMAIN;
+  const fbConnect = fbDomain ? " https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com" : "";
+  const fbFrame = fbDomain ? `frame-src https://${fbDomain} https://accounts.google.com https://appleid.apple.com https://www.facebook.com` : "frame-src 'none'";
   const csp = [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${dev ? " 'unsafe-eval'" : ""}`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https://res.cloudinary.com",
     "font-src 'self'",
-    "connect-src 'self' https://api.cloudinary.com",
+    `connect-src 'self' https://api.cloudinary.com${fbConnect}`,
+    fbFrame,
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",

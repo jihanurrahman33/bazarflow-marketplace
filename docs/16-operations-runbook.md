@@ -86,3 +86,29 @@ Daily reconciliation (once real money flows): provider settlement report vs `pay
 ## 8. Store submissions (not yet done)
 
 Prepare: privacy policy and data-safety/App Privacy answers (data collected: account email/name/phone/addresses, order history, device push token, crash and usage analytics without PII), notification permission copy, signing keys, staged rollout, and a rollback plan. Test on real devices (foreground/background/terminated notification taps, token expiry, offline, step-up prompt) — this has not been done.
+
+## 9. Social sign-in (Google, Apple, Facebook via Firebase)
+
+**How it works.** The browser signs in with Firebase, gets a Firebase *ID token*, and posts it to `POST /api/v1/auth/social`. The server verifies the token itself (RS256 against Google's published keys, issuer and audience pinned to your project) and then issues BazarFlow's own session. Firebase is only the identity broker: roles, step-up, revocation and the audit log are unchanged. The mobile apps use the same endpoint with `transport: "token"`.
+
+**Rules the server enforces** (tests in `tests/social-login.test.ts`):
+- A returning user is matched by the provider's stable subject id, not by email.
+- A new identity links to an existing account only when the provider says the email is verified. If that account's own email was never verified (it could have been pre-registered by someone else), its password is discarded and its sessions revoked at link time.
+- No verified email, no account (Facebook accounts without an email, for example, must use email sign-up).
+- **Administrator accounts cannot sign in this way**, ever. Sellers and customers can.
+- Suspended accounts are refused; only the providers listed in `FIREBASE_SIGN_IN_PROVIDERS` are accepted.
+
+**Setup, once per Firebase project**
+1. Firebase console → Build → Authentication → Sign-in method: enable **Google**, **Apple**, **Facebook**.
+   - *Google*: nothing else needed.
+   - *Apple*: needs an Apple Developer account, a Services ID, a key, and your Team ID; add Firebase's callback URL (`https://<project>.firebaseapp.com/__/auth/handler`) as a return URL. Apple is mandatory in the App Store if you offer other social logins in the iOS apps.
+   - *Facebook*: create a Facebook app (Facebook Login product), paste its App ID and secret into Firebase, and add the same callback URL as a valid OAuth redirect.
+2. Authentication → Settings → **Authorized domains**: add `bazarflow.nishak.tech` (and any preview domain you test on).
+3. Authentication → Settings → User account linking: keep **"Link accounts that use the same email"** (the default is one account per email).
+4. Project settings → General → Your apps → add a **Web app** and copy its config.
+5. In Vercel (Production), set: `FIREBASE_PROJECT_ID`, `FIREBASE_WEB_API_KEY`, `FIREBASE_AUTH_DOMAIN`, optionally `FIREBASE_WEB_APP_ID` and `FIREBASE_SIGN_IN_PROVIDERS`. Redeploy. The buttons appear on the sign-in and sign-up pages as soon as the server reports itself configured (`GET /api/v1/auth/social/config`). These web values are public; the *server* needs no Firebase secret because it only verifies tokens.
+6. Run `npm run db:indexes` once so the `uq_users_identity` index exists.
+
+**Mobile.** Add `firebase_auth` plus `google_sign_in` / `sign_in_with_apple` / `flutter_facebook_auth` in each Flutter app after `flutterfire configure`, obtain the Firebase ID token, and call the same endpoint. Not built yet: it needs your Firebase project files.
+
+**Not verified.** The verification path is tested with an injected verifier; it has not run against a live Firebase project, and the three provider consoles (Apple especially) are yours to configure.

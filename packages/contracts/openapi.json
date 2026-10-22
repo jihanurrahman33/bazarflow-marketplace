@@ -2163,6 +2163,69 @@
         }
       }
     },
+    "/api/v1/auth/social/config": {
+      "get": {
+        "operationId": "auth.social.config",
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "2XX": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/social": {
+      "post": {
+        "operationId": "auth.social",
+        "security": [],
+        "parameters": [],
+        "x-rate-limit": {
+          "limit": 20,
+          "windowSeconds": 900,
+          "by": "ip"
+        },
+        "responses": {
+          "2XX": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/auth/step-up": {
       "post": {
         "operationId": "auth.step_up",

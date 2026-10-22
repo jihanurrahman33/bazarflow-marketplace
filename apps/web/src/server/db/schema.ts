@@ -17,6 +17,8 @@ export interface UserDoc {
   status: AccountStatus;
   vendorId?: ObjectId;
   emailVerifiedAt?: Date;
+  /** Linked social identities (Firebase sign-in providers). A person may have several. */
+  identities?: { provider: string; subject: string; email?: string; linkedAt: Date }[];
   failedLoginCount: number;
   lockedUntil?: Date;
   createdAt: Date;

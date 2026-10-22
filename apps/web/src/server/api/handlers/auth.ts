@@ -2,9 +2,10 @@ import { z } from "zod";
 import { ACCESS_COOKIE, REFRESH_COOKIE, accepted, clearCookie, noContent, ok, readCookie, route, setCookie, type Reply } from "@/server/api/route";
 import { getEnv } from "@/server/config/env";
 import { AppError } from "@/server/shared/errors";
+import { enabledProviders } from "@/server/modules/identity/firebase";
 import {
   changePassword, forgotPassword, getProfile, listSessions, login, logoutAll, logoutByRefreshToken, refresh,
-  registerUser, resendVerification, stepUp, resetPassword, revokeSession, updateProfile, verifyContact, type TokenPair, type UserDto,
+  registerUser, resendVerification, socialLogin, stepUp, resetPassword, revokeSession, updateProfile, verifyContact, type TokenPair, type UserDto,
 } from "@/server/modules/identity/service";
 
 const email = z.email().max(254);
@@ -18,6 +19,8 @@ const transport = z.enum(["token", "cookie"]).default("token");
 const registerBody = z.strictObject({ email, password, name: z.string().trim().min(1).max(80), phone: phone.optional(), device, transport });
 const loginBody = z.strictObject({ email, password: z.string().min(1).max(128), device, transport });
 const refreshBody = z.strictObject({ refreshToken: z.string().min(20).max(256).optional(), device: device.optional(), transport: transport.optional() });
+
+const socialBody = z.strictObject({ idToken: z.string().min(100).max(4096), device, transport });
 
 function authCookies(tokens: TokenPair): string[] {
   const env = getEnv();
@@ -50,6 +53,24 @@ export const loginHandler = route(
     return sessionReply(200, user, tokens, b.transport);
   },
 );
+
+export const socialLoginHandler = route(
+  { name: "auth.social", auth: false, rateLimit: { rule: { name: "auth.social", limit: 20, windowSeconds: 900 }, by: "ip" } },
+  async (ctx) => {
+    const b = await ctx.body(socialBody);
+    const { user, tokens } = await socialLogin({ idToken: b.idToken, device: b.device });
+    return sessionReply(200, user, tokens, b.transport);
+  },
+);
+
+/** Public web config for the Firebase SDK (these values are not secrets) so the site needs no rebuild to switch providers on. */
+export const socialConfigHandler = route({ name: "auth.social.config", auth: false }, async () => {
+  const e = getEnv();
+  const on = !!(e.FIREBASE_PROJECT_ID && e.FIREBASE_WEB_API_KEY && e.FIREBASE_AUTH_DOMAIN);
+  return on
+    ? ok({ enabled: true, providers: enabledProviders(), firebase: { apiKey: e.FIREBASE_WEB_API_KEY, authDomain: e.FIREBASE_AUTH_DOMAIN, projectId: e.FIREBASE_PROJECT_ID, appId: e.FIREBASE_WEB_APP_ID } })
+    : ok({ enabled: false, providers: [] as string[] });
+});
 
 export const refreshHandler = route(
   { name: "auth.refresh", auth: false, rateLimit: { rule: { name: "auth.refresh", limit: 60, windowSeconds: 60 }, by: "ip" } },

@@ -6,6 +6,7 @@ import { api, messageFor } from "@/lib/api";
 import { useAction } from "@/lib/hooks";
 import { safeNext } from "@/lib/nav";
 import { useSession } from "./providers";
+import { SocialLogin } from "./social-login";
 import { Alert, Button, Field, fieldMessage } from "./ui";
 
 const device = { platform: "web" as const };
@@ -30,6 +31,7 @@ export function LoginForm() {
       <Field label="Email" error={fieldMessage(login.error, "email")}>{(p) => <input {...p} className="input" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />}</Field>
       <Field label="Password" error={fieldMessage(login.error, "password")}>{(p) => <input {...p} className="input" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />}</Field>
       <Button type="submit" variant="primary" loading={login.pending} block>Sign in</Button>
+      <SocialLogin next={next} />
       <div className="row-between small"><Link href="/forgot-password">Forgot password?</Link><Link href={`/register?next=${encodeURIComponent(next)}`}>Create an account</Link></div>
     </form>
   );
@@ -55,6 +57,7 @@ export function RegisterForm() {
       <Field label="Mobile number (optional)" hint="Used for delivery updates." error={fieldMessage(reg.error, "phone")}>{(p) => <input {...p} className="input" type="tel" inputMode="tel" autoComplete="tel" placeholder="+8801…" value={f.phone} onChange={set("phone")} />}</Field>
       <Field label="Password" hint="At least 10 characters." error={fieldMessage(reg.error, "password")}>{(p) => <input {...p} className="input" type="password" autoComplete="new-password" required minLength={10} value={f.password} onChange={set("password")} />}</Field>
       <Button type="submit" variant="primary" loading={reg.pending} block>Create account</Button>
+      <SocialLogin next={next} />
       <p className="small muted center">Already have an account? <Link href="/login">Sign in</Link></p>
     </form>
   );
