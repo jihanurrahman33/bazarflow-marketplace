@@ -3316,6 +3316,54 @@
         }
       }
     },
+    "/api/v1/products/{slug}/reviews/eligibility": {
+      "get": {
+        "operationId": "products.reviews.eligibility",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-required-role": [
+          "customer"
+        ],
+        "responses": {
+          "2XX": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/products/{slug}/reviews": {
       "post": {
         "operationId": "reviews.create",

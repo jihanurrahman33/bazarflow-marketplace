@@ -5,7 +5,7 @@ import { parseObjectId } from "@/server/shared/ids";
 import { pageQuery } from "@/server/shared/pagination";
 import { getOrderForSupport, salesSummary, searchOrders } from "@/server/modules/admin/ops";
 import { approvePayout, cancelPayout, listPayouts, markPayoutFailed, markPayoutPaid, rejectPayout, requestPayout } from "@/server/modules/payouts/service";
-import { createReview, listProductReviews, setReviewStatus } from "@/server/modules/reviews/service";
+import { createReview, listProductReviews, reviewEligibility, setReviewStatus } from "@/server/modules/reviews/service";
 
 const objectIdStr = z.string().regex(/^[0-9a-f]{24}$/i);
 
@@ -19,7 +19,12 @@ export const createReviewHandler = route<{ slug: string }>(
   },
 );
 
-export const listReviewsHandler = route<{ slug: string }>({ name: "products.reviews", auth: false }, async (ctx) => {
+export const reviewEligibilityHandler = route<{ slug: string }>({ name: "products.reviews.eligibility" }, async (ctx) => {
+  requireRole(ctx.actor, "customer");
+  return ok(await reviewEligibility(ctx.actor, ctx.params.slug));
+});
+
+export const listReviewsHandler =route<{ slug: string }>({ name: "products.reviews", auth: false }, async (ctx) => {
   const r = await listProductReviews(ctx.params.slug, ctx.query(pageQuery));
   return page(r.items, r, { meta: { ...{ nextCursor: r.nextCursor, hasMore: r.nextCursor !== null }, summary: r.summary }, cache: "public, s-maxage=30, stale-while-revalidate=120" });
 });

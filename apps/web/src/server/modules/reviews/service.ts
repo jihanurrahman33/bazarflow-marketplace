@@ -31,6 +31,16 @@ export async function createReview(actor: Actor, productSlug: string, input: { r
   return toDto(doc);
 }
 
+/** Lets the product page show the review form only to people who may actually use it. */
+export async function reviewEligibility(actor: Actor, productSlug: string): Promise<{ canReview: boolean; reason?: "not_purchased" | "already_reviewed" }> {
+  const c = await getCollections();
+  const product = await c.products.findOne({ slug: productSlug, status: "published" }, { projection: { _id: 1 } });
+  if (!product) throw new AppError("NOT_FOUND");
+  if (await c.reviews.countDocuments({ productId: product._id, userId: actor.userId }, { limit: 1 })) return { canReview: false, reason: "already_reviewed" };
+  const bought = await c.vendorOrders.countDocuments({ buyerId: actor.userId, "items.productId": product._id, fulfillmentStatus: "delivered" }, { limit: 1 });
+  return bought ? { canReview: true } : { canReview: false, reason: "not_purchased" };
+}
+
 export async function listProductReviews(slug: string, q: { limit: number; cursor?: string }) {
   const c = await getCollections();
   const product = await c.products.findOne({ slug, status: "published", vendorActive: true }, { projection: { _id: 1 } });

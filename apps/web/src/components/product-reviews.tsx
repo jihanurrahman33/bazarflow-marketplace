@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { api, messageFor } from "@/lib/api";
 import { formatDate } from "@/lib/format";
-import { useAction } from "@/lib/hooks";
+import { useAction, useApi } from "@/lib/hooks";
 import { useSession, useToast } from "./providers";
 import { Alert, Button, ConfirmDialog, Field, Stars } from "./ui";
 
@@ -39,6 +39,8 @@ export function ProductReviews({ productSlug, productTitle, initialReviews, init
   const [reviews, setReviews] = useState<ReviewItem[]>(initialReviews);
   const [summary, setSummary] = useState<ReviewSummary>(initialSummary);
   const [writing, setWriting] = useState(false);
+  const [posted, setPosted] = useState(false);
+  const eligibility = useApi<{ canReview: boolean; reason?: string }>(user?.role === "customer" ? `/products/${productSlug}/reviews/eligibility` : null);
   const [rating, setRating] = useState(5);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -58,12 +60,11 @@ export function ProductReviews({ productSlug, productTitle, initialReviews, init
     });
     toast("Thank you for your review!");
     setWriting(false);
+    setPosted(true);
     setTitle("");
     setBody("");
     setRating(5);
   });
-
-  const alreadyReviewed = user ? reviews.some((r) => r.author.toLowerCase().startsWith(user.name.split(" ")[0]?.toLowerCase() ?? "")) : false;
 
   return (
     <section aria-labelledby="reviews-heading" id="reviews" className="stack">
@@ -82,16 +83,16 @@ export function ProductReviews({ productSlug, productTitle, initialReviews, init
 
         <div>
           {status === "ready" && !user ? (
-            <Link href={`/login?next=${encodeURIComponent(path + "#reviews")}`} className="btn btn-secondary btn-sm">
-              Sign in to write a review
-            </Link>
-          ) : user && user.role !== "customer" ? (
-            <span className="muted small">Only customers can review products.</span>
-          ) : (
-            <Button size="sm" variant="primary" onClick={() => setWriting(true)}>
-              Write a review
-            </Button>
-          )}
+            <Link href={`/login?next=${encodeURIComponent(path + "#reviews")}`} className="muted small">Bought this? Sign in to review</Link>
+          ) : user?.role === "customer" && eligibility.data ? (
+            posted || eligibility.data.reason === "already_reviewed" ? (
+              <span className="muted small">You've reviewed this product</span>
+            ) : eligibility.data.canReview ? (
+              <Button size="sm" variant="primary" onClick={() => setWriting(true)}>Write a review</Button>
+            ) : (
+              <span className="muted small">Reviews open after your order is delivered</span>
+            )
+          ) : null}
         </div>
       </div>
 
@@ -134,9 +135,6 @@ export function ProductReviews({ productSlug, productTitle, initialReviews, init
         onConfirm={() => void submit.run()}
       >
         {submit.error && <Alert tone="danger">{messageFor(submit.error)}</Alert>}
-        {alreadyReviewed && (
-          <Alert tone="warning">You may have already reviewed this product. Each verified buyer can review once.</Alert>
-        )}
         <Field label="Rating">
           {(p) => (
             <select

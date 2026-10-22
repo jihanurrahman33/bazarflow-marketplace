@@ -11,7 +11,7 @@ import {
 import { getOrderHandler } from "@/server/api/handlers/shopping";
 import { adminApproveRefundHandler, vendorBalanceHandler, vendorLedgerHandler } from "@/server/api/handlers/payments";
 import {
-  adminOrderHandler, adminOrdersHandler, adminPayoutsHandler, approvePayoutHandler, cancelPayoutHandler, createReviewHandler, hideReviewHandler,
+  adminOrderHandler, adminOrdersHandler, adminPayoutsHandler, approvePayoutHandler, cancelPayoutHandler, createReviewHandler, hideReviewHandler, reviewEligibilityHandler,
   listReviewsHandler, markFailedHandler, markPaidHandler, rejectPayoutHandler, requestPayoutHandler, salesReportHandler, vendorPayoutsHandler,
 } from "@/server/api/handlers/commerce-ops";
 import { patchProfileHandler } from "@/server/api/handlers/vendors";
@@ -275,8 +275,13 @@ describe("reviews", () => {
     const slug = o.products[0]!.slug;
     const review = (token: string, body: object) => call(createReviewHandler, { method: "POST", token, params: { slug }, body });
     const good = { rating: 5, body: "Great quality, arrived quickly." };
+    const eligible = (token?: string) => call(reviewEligibilityHandler, { token, params: { slug } });
     expect((await review(o.buyer.token, good)).error?.details[0]?.code).toBe("NOT_VERIFIED_PURCHASE"); // not delivered yet
+    expect((await eligible(o.buyer.token)).data).toEqual({ canReview: false, reason: "not_purchased" });
+    expect((await eligible()).status).toBe(401);
     await fulfil(o.vendors[0]!, o.vos[0]!._id.toHexString());
+    expect((await eligible(o.buyer.token)).data).toEqual({ canReview: true });
+    expect((await eligible((await makeCustomer()).token)).data).toEqual({ canReview: false, reason: "not_purchased" });
     expect((await review((await makeCustomer()).token, good)).status).toBe(403);
     expect((await review(o.buyer.token, { rating: 6, body: "Great quality, arrived." })).status).toBe(400);
     expect((await review(o.buyer.token, { rating: 4, body: "short" })).status).toBe(400);
@@ -284,6 +289,7 @@ describe("reviews", () => {
     const created = await review(o.buyer.token, good);
     expect(created.status).toBe(201);
     expect((await review(o.buyer.token, good)).error?.code).toBe("CONFLICT");
+    expect((await eligible(o.buyer.token)).data).toEqual({ canReview: false, reason: "already_reviewed" });
 
     const list = await call(listReviewsHandler, { params: { slug } });
     expect(list.data).toHaveLength(1);
