@@ -15,6 +15,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       { href: "/admin/vendors", label: "Sellers", icon: <IconUsers />, group: "Marketplace" },
       { href: "/admin/products", label: "Product review", icon: <IconTag />, group: "Marketplace" },
       { href: "/admin/categories", label: "Categories", icon: <IconBox />, group: "Marketplace" },
+      { href: "/admin/review-flags", label: "Review checks", icon: <IconShieldLock />, group: "Marketplace" },
       { href: "/admin/payments", label: "Payment exceptions", icon: <IconAlert />, group: "Money" },
       { href: "/admin/refunds", label: "Refunds", icon: <IconRefund />, group: "Money" },
       { href: "/admin/payouts", label: "Payouts", icon: <IconCoin />, group: "Money" },

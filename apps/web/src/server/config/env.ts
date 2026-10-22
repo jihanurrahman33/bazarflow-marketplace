@@ -56,11 +56,17 @@ const schema = z
     FIREBASE_SIGN_IN_PROVIDERS: z.string().default("google.com,apple.com,facebook.com"),
     /** Shared secret for the scheduled worker endpoint (/api/internal/worker). Unset = the endpoint does not exist. */
     CRON_SECRET: z.string().min(24).optional(),
+    /** Sentry (or compatible) DSN for error reporting. Unset = errors are only logged. */
+    SENTRY_DSN: z.string().url().optional(),
     SMTP_URL: z.string().optional(),
     MAIL_FROM: z.string().min(5).default("BazarFlow <no-reply@bazarflow.example>"),
     /** Firebase service-account JSON (as a string) for server-side push. Unset = push is NOT sent (inbox still works). */
     FCM_SERVICE_ACCOUNT_JSON: z.string().optional(),
     COD_ENABLED: z.enum(["true", "false"]).default("false").transform((v) => v === "true"),
+    /** Cash-on-delivery guard rails (modules/checkout/risk.ts). Amounts are in minor units (paisa). */
+    COD_MAX_ORDER_MINOR: z.coerce.number().int().min(100).default(3_000_000),
+    COD_MAX_OPEN_ORDERS: z.coerce.number().int().min(1).default(3),
+    COD_BLOCK_AFTER_FAILURES: z.coerce.number().int().min(1).default(2),
   })
   .superRefine((env, ctx) => {
     if (env.PAYMENT_PROVIDER === "mock" && env.PAYMENT_MODE === "live") {

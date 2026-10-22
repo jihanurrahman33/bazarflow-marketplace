@@ -89,6 +89,7 @@ export function CheckoutView() {
         <section className="card stack" aria-labelledby="pay">
           <h2 id="pay">{t("2. Payment")}</h2>
           <label className="row"><input type="radio" name="pm" checked={method === "online"} onChange={() => setMethod("online")} /> <span><strong>{t("Pay online")}</strong><br /><span className="muted small">{t("You'll complete payment on the provider's secure page.")}</span></span></label>
+          {quote?.codNotice && <p className="muted small" role="note">{quote.codNotice}</p>}
           {quote?.paymentMethods?.includes("cod") && <label className="row"><input type="radio" name="pm" checked={method === "cod"} onChange={() => setMethod("cod")} /> <span><strong>{t("Cash on delivery")}</strong><br /><span className="muted small">{t("Pay the courier when your order arrives.")}</span></span></label>}
         </section>
       </div>

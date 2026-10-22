@@ -14,6 +14,7 @@ import { toOrderDto } from "@/server/modules/orders/dto";
 import { getPaymentAdapter } from "@/server/modules/payments/registry";
 import { buildQuote, toQuoteDto, type Quote } from "./quote";
 import { redeemCoupon } from "@/server/modules/coupons/service";
+import { codEligibility } from "./risk";
 
 export interface CheckoutInput {
   addressId: ObjectId;
@@ -33,7 +34,8 @@ export async function quoteCheckout(actor: Actor, input: { addressId: ObjectId }
   const address = await getOwnedAddress(actor.userId, input.addressId);
   const cart = await c.carts.findOne({ userId: actor.userId });
   const quote = await buildQuote(cart?.lines ?? [], address.district, { couponCode: cart?.couponCode, userId: actor.userId });
-  return { ...toQuoteDto(quote), paymentMethods: ["online", ...(getEnv().COD_ENABLED ? ["cod"] : [])] };
+  const cod = getEnv().COD_ENABLED ? await codEligibility(actor.userId, quote.totals.totalMinor) : undefined;
+  return { ...toQuoteDto(quote), paymentMethods: ["online", ...(cod?.ok ? ["cod"] : [])], ...(cod && !cod.ok ? { codNotice: cod.message } : {}) };
 }
 
 function assertQuoteOrderable(quote: Quote) {
@@ -57,6 +59,10 @@ export async function placeOrder(actor: Actor, input: CheckoutInput) {
   const cart = await c.carts.findOne({ userId: actor.userId });
   const quote = await buildQuote(cart?.lines ?? [], address.district, { couponCode: cart?.couponCode, userId: actor.userId });
   assertQuoteOrderable(quote);
+  if (input.paymentMethod === "cod") {
+    const risk = await codEligibility(actor.userId, quote.totals.totalMinor);
+    if (!risk.ok) throw new AppError("BUSINESS_RULE_VIOLATION", { message: risk.message, details: [{ field: "paymentMethod", code: `COD_${risk.code}` }] });
+  }
   if (input.paymentMethod === "online") {
     const caps = getPaymentAdapter().capabilities();
     if (quote.totals.totalMinor < caps.minAmountMinor || quote.totals.totalMinor > caps.maxAmountMinor) {

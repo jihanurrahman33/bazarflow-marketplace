@@ -5,6 +5,7 @@ import { parseObjectId } from "@/server/shared/ids";
 import { pageQuery } from "@/server/shared/pagination";
 import { getOrderForSupport, salesSummary, searchOrders } from "@/server/modules/admin/ops";
 import { approvePayout, cancelPayout, listPayouts, markPayoutFailed, markPayoutPaid, rejectPayout, requestPayout } from "@/server/modules/payouts/service";
+import { reviewFlags } from "@/server/modules/reviews/flags";
 import { createReview, listProductReviews, reviewEligibility, setReviewStatus } from "@/server/modules/reviews/service";
 
 const objectIdStr = z.string().regex(/^[0-9a-f]{24}$/i);
@@ -27,6 +28,11 @@ export const reviewEligibilityHandler = route<{ slug: string }>({ name: "product
 export const listReviewsHandler =route<{ slug: string }>({ name: "products.reviews", auth: false }, async (ctx) => {
   const r = await listProductReviews(ctx.params.slug, ctx.query(pageQuery.extend({ rating: z.coerce.number().int().min(1).max(5).optional(), sort: z.enum(["newest", "highest", "lowest"]).optional() })));
   return page(r.items, r, { meta: { ...{ nextCursor: r.nextCursor, hasMore: r.nextCursor !== null }, summary: r.summary }, cache: "public, s-maxage=30, stale-while-revalidate=120" });
+});
+
+export const reviewFlagsHandler = route({ name: "admin.reviews.flags" }, async (ctx) => {
+  requirePermission(ctx.actor, "catalog.moderate");
+  return ok(await reviewFlags());
 });
 
 export const hideReviewHandler = route<{ id: string }>({ name: "admin.reviews.hide" }, async (ctx) => {

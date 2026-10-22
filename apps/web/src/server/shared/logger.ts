@@ -1,4 +1,5 @@
 /* eslint-disable no-console -- the logger is the single sanctioned console sink */
+import { reportError } from "./error-report";
 type Level = "debug" | "info" | "warn" | "error";
 const order: Record<Level, number> = { debug: 10, info: 20, warn: 30, error: 40 };
 
@@ -21,6 +22,7 @@ function emit(level: Level, msg: string, ctx: LogContext = {}): void {
   for (const [k, v] of Object.entries(ctx)) if (ALLOWED.has(k) && v !== undefined) safe[k] = v;
   const line = JSON.stringify({ ts: new Date().toISOString(), level, env: process.env.NODE_ENV, msg, ...safe });
   (level === "error" ? console.error : level === "warn" ? console.warn : console.log)(line);
+  if (level === "error") reportError(msg, safe);
 }
 
 export const logger = {
