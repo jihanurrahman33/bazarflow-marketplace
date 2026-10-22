@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { Suspense } from "react";
+import { ListingBodySkeleton } from "@/components/skeletons";
 import { Listing, toParams } from "@/components/listing";
 import { getCategories } from "@/lib/server-data";
 
@@ -32,7 +34,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
       <nav className="breadcrumbs" aria-label="Breadcrumb"><Link href="/">Home</Link> / {found?.parent && <><Link href={`/category/${found.parent.slug}`}>{found.parent.name}</Link> / </>}{found?.cat.name ?? slug}</nav>
       <h1>{found?.cat.name ?? slug}</h1>
       {found && found.cat.children.length > 0 && <div className="row">{found.cat.children.map((c) => <Link key={c.id} href={`/category/${c.slug}`} className="btn btn-sm">{c.name}</Link>)}</div>}
-      <Listing base={`/category/${slug}`} params={p} heading={found?.cat.name} />
+      <Suspense key={JSON.stringify(p)} fallback={<ListingBodySkeleton />}><Listing base={`/category/${slug}`} params={p} heading={found?.cat.name} /></Suspense>
     </div>
   );
 }

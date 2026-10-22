@@ -1,13 +1,19 @@
 import type { Metadata, Viewport } from "next";
-import Link from "next/link";
 import type { ReactNode } from "react";
+import { Inter } from "next/font/google";
+import { Suspense } from "react";
 import "./globals.css";
+import "./storefront.css";
 import { Providers } from "@/components/providers";
+import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { TopProgress } from "@/components/top-progress";
 import { getCategories } from "@/lib/server-data";
 
 // Rendered per request: the category bar reads the database and must never be prerendered at build time.
 export const dynamic = "force-dynamic";
+
+const inter = Inter({ subsets: ["latin"], display: "swap", variable: "--font-sans" });
 
 export const metadata: Metadata = {
   title: { default: "BazarFlow — shop from trusted sellers", template: "%s · BazarFlow" },
@@ -20,25 +26,14 @@ export const viewport: Viewport = { width: "device-width", initialScale: 1, view
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const cats = await getCategories();
   return (
-    <html lang="en">
+    <html lang="en" className={inter.variable}>
       <body>
         <a href="#main" className="skip-link">Skip to content</a>
         <Providers>
-          <SiteHeader />
-          {cats.ok && cats.value.length > 0 && (
-            <nav className="category-bar" aria-label="Categories">
-              <div className="container">
-                {cats.value.map((c) => <Link key={c.id} href={`/category/${c.slug}`}>{c.name}</Link>)}
-              </div>
-            </nav>
-          )}
+          <Suspense fallback={null}><TopProgress /></Suspense>
+          <SiteHeader categories={cats.ok ? cats.value : []} />
           <main id="main">{children}</main>
-          <footer className="site-footer">
-            <div className="container row-between">
-              <span>© {new Date().getFullYear()} BazarFlow</span>
-              <span className="row"><Link href="/become-a-seller">Sell on BazarFlow</Link><Link href="/help">Help</Link></span>
-            </div>
-          </footer>
+          <SiteFooter categories={cats.ok ? cats.value : []} />
         </Providers>
       </body>
     </html>

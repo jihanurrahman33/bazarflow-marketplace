@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
+import { ListingBodySkeleton } from "@/components/skeletons";
 import { Listing, toParams } from "@/components/listing";
 import { getVendor } from "@/lib/server-data";
 
@@ -19,11 +21,11 @@ export default async function VendorPage({ params, searchParams }: Props) {
   }
   return (
     <div className="container page stack">
-      <header className="card">
-        <h1>{v.value.name}</h1>
-        {v.value.description && <p className="muted">{v.value.description}</p>}
+      <header className="store-hero">
+        <span className="store-logo store-logo-lg" aria-hidden="true">{v.value.name.slice(0, 1)}</span>
+        <div><h1>{v.value.name}</h1>{v.value.description && <p>{v.value.description}</p>}</div>
       </header>
-      <Listing base={`/vendors/${slug}`} params={{ ...toParams(await searchParams), vendor: slug }} />
+      <Suspense key={JSON.stringify(await searchParams)} fallback={<ListingBodySkeleton />}><Listing base={`/vendors/${slug}`} params={{ ...toParams(await searchParams), vendor: slug }} /></Suspense>
     </div>
   );
 }

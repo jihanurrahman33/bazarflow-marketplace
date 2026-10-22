@@ -25,3 +25,13 @@ export function parseMoneyInput(input: string): number | null {
   if (!m) return null;
   return Number(m[1]) * 100 + Number((m[2] ?? "").padEnd(2, "0"));
 }
+
+/** Compact price for cards: no ".00" on whole amounts (৳599 rather than ৳599.00). */
+export function formatMoneyShort(amountMinor: number, currency = "BDT", locale = "en-BD"): string {
+  const major = amountMinor / 100;
+  try {
+    return new Intl.NumberFormat(locale, { style: "currency", currency, currencyDisplay: "narrowSymbol", minimumFractionDigits: Number.isInteger(major) ? 0 : 2, maximumFractionDigits: 2 }).format(major);
+  } catch {
+    return `${currency} ${major}`;
+  }
+}

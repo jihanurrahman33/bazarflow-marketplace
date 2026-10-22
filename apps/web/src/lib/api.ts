@@ -1,3 +1,5 @@
+import { trackRequest } from "./activity";
+
 /** Browser API client. Cookie-authenticated; one shared refresh so concurrent 401s never race to rotate the token. */
 
 export interface ApiMeta {
@@ -51,11 +53,11 @@ async function send(path: string, opts: RequestOptions): Promise<Response> {
   if (opts.body !== undefined) headers["content-type"] = "application/json";
   if (opts.idempotencyKey) headers["idempotency-key"] = opts.idempotencyKey;
   try {
-    return await fetch(`/api/v1${path}`, {
+    return await trackRequest(fetch(`/api/v1${path}`, {
       method: opts.method ?? "GET", headers, credentials: "same-origin",
       body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
       signal: opts.signal ?? AbortSignal.timeout(25_000),
-    });
+    }));
   } catch (e) {
     if (e instanceof DOMException && e.name === "AbortError") throw new ApiError(0, "CANCELLED", "Request cancelled");
     if (e instanceof DOMException && e.name === "TimeoutError") throw new ApiError(0, "TIMEOUT", "The request timed out. Check your connection and try again.");

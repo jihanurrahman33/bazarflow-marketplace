@@ -41,7 +41,12 @@ export function ProductBuy({ productId, slug, currency, options, variants }: Pro
     <div className="stack">
       <div>
         <span className="price" style={{ fontSize: "var(--text-headline)" }}>{!variant && variants.length > 1 ? "From " : ""}{formatMoney(price, currency)}</span>
-        {variant?.compareAtMinor && <span className="price-was">{formatMoney(variant.compareAtMinor, currency)}</span>}
+        {variant?.compareAtMinor && variant.compareAtMinor > variant.priceMinor && (
+          <>
+            <span className="price-was">{formatMoney(variant.compareAtMinor, currency)}</span>
+            <span className="discount-tag">-{Math.round(((variant.compareAtMinor - variant.priceMinor) / variant.compareAtMinor) * 100)}%</span>
+          </>
+        )}
       </div>
 
       {options.map((o) => (
@@ -72,7 +77,7 @@ export function ProductBuy({ productId, slug, currency, options, variants }: Pro
         ) : user && user.role !== "customer" ? (
           <span className="muted small">Sign in with a customer account to buy.</span>
         ) : (
-          <Button variant="primary" onClick={() => void add.run()} loading={add.pending} disabled={!canBuy}>
+          <Button variant="primary" className="btn-cta" onClick={() => void add.run()} loading={add.pending} disabled={!canBuy}>
             {options.length > 0 && !variant ? "Select options" : canBuy ? "Add to cart" : "Unavailable"}
           </Button>
         )}

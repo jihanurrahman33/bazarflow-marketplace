@@ -39,6 +39,13 @@ async function availabilityByVariant(productIds: ObjectId[]) {
   return map;
 }
 
+/** List price of the cheapest active variant, when it is genuinely discounted (compare-at above the selling price). */
+function discountOf(p: ProductDoc): { compareAtMinor: number; discountPercent: number } | undefined {
+  const cheapest = p.variants.filter((v) => v.active).sort((a, b) => a.priceMinor - b.priceMinor)[0];
+  if (!cheapest?.compareAtMinor || cheapest.compareAtMinor <= cheapest.priceMinor) return undefined;
+  return { compareAtMinor: cheapest.compareAtMinor, discountPercent: Math.round(((cheapest.compareAtMinor - cheapest.priceMinor) / cheapest.compareAtMinor) * 100) };
+}
+
 export async function listPublicProducts(q: ListProductsQuery) {
   const c = await getCollections();
   const filter: Filter<ProductDoc> = { status: "published", vendorActive: true };
@@ -100,7 +107,7 @@ export async function listPublicProducts(q: ListProductsQuery) {
   const vmap = new Map(vendors.map((v) => [v._id.toHexString(), v]));
   return {
     items: rows.map((p) => ({
-      id: p._id.toHexString(), slug: p.slug, title: p.title, image: cardImage(p), minPriceMinor: p.minPriceMinor, currency: p.currency,
+      id: p._id.toHexString(), slug: p.slug, title: p.title, image: cardImage(p), minPriceMinor: p.minPriceMinor, currency: p.currency, ...discountOf(p),
       inStock: p.variants.some((v) => v.active && (avail.get(`${p._id.toHexString()}:${v.variantId}`) ?? 0) > 0),
       vendor: { slug: vmap.get(p.vendorId.toHexString())?.slug, name: vmap.get(p.vendorId.toHexString())?.name },
     })),

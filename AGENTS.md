@@ -52,6 +52,7 @@ node packages/design-tokens/build.mjs      # regenerate CSS + Dart tokens
 - Money-moving admin actions need step-up (`requireStepUp`) and, above thresholds, a second approver.
 - Flutter widget tests that touch Dio must use `tester.runAsync`; dispose controllers in State classes, not around dialogs; never auto-retry a failing list from a scroll listener.
 - Do not claim something works unless a test or run proved it; update docs/15 when a limit changes.
+- A `loading.tsx` (including a route-group one) makes Next commit HTTP 200 before data resolves, so routes that must return a real 404 (product, category, vendor) use in-page `<Suspense>` after the existence check instead. The smoke test "unknown product is a real 404" guards this.
 
 Do not share TypeScript runtime logic with Dart; share contracts (OpenAPI) and keep native implementations aligned.
 

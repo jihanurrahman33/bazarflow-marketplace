@@ -1,7 +1,7 @@
 import "server-only";
 import { listCategoryTree } from "@/server/modules/catalog/categories";
 import { getPublicProduct, listPublicProducts, type ListProductsQuery } from "@/server/modules/catalog/public";
-import { getPublicVendorBySlug } from "@/server/modules/vendors/service";
+import { getPublicVendorBySlug, listVendors } from "@/server/modules/vendors/service";
 import { listProductReviews } from "@/server/modules/reviews/service";
 import { isAppError } from "@/server/shared/errors";
 import { logger } from "@/server/shared/logger";
@@ -24,3 +24,4 @@ export const getProducts = (q: ListProductsQuery) => load("products", () => list
 export const getProduct = (slug: string) => load("product", () => getPublicProduct(slug));
 export const getVendor = (slug: string) => load("vendor", () => getPublicVendorBySlug(slug));
 export const getReviews = (slug: string) => load("reviews", () => listProductReviews(slug, { limit: 5 }));
+export const getStores = () => load("stores", async () => (await listVendors({ status: "active", limit: 12 })).items.map((v) => ({ id: v.id, slug: v.slug, name: v.name, description: v.description })));
