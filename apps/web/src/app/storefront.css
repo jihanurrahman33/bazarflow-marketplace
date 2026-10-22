@@ -183,7 +183,7 @@ html { scroll-behavior: smooth; }
 .value-strip svg { color: var(--color-primary); }
 @media (max-width: 700px) { .value-strip { margin-top: -16px; gap: 8px 20px; font-size: 13px; justify-content: flex-start; } }
 
-.cat-strip { display: flex; gap: clamp(16px, 3vw, 40px); overflow-x: auto; scrollbar-width: none; padding-bottom: 4px; justify-content: center; }
+.cat-strip { display: flex; gap: clamp(16px, 3vw, 40px); overflow-x: auto; scrollbar-width: none; padding-bottom: 4px; justify-content: safe center; }
 .cat-strip::-webkit-scrollbar { display: none; }
 .cat-chip { display: flex; flex-direction: column; align-items: center; gap: 10px; color: var(--color-text-primary); font-size: 14px; font-weight: 600; flex: none; min-width: 84px; }
 .cat-chip:hover { text-decoration: none; }

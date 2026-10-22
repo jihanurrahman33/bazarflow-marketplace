@@ -31,20 +31,24 @@ export function ValueStrip() {
   return <ul className="value-strip" aria-label="Why shop here">{items.map((i) => <li key={i.label}>{i.icon}{i.label}</li>)}</ul>;
 }
 
+/** Round category tile: the curated banner if there is one, otherwise the newest product's photo in that category. */
+async function CategoryChip({ slug, name }: { slug: string; name: string }) {
+  const banner = CATEGORY_BANNER[slug];
+  const image = banner ? siteImage(banner, { w: 240, h: 240 }) : await firstImage(slug);
+  return (
+    <Link href={`/category/${slug}`} className="cat-chip">
+      <span className="cat-chip-img"><SmartImage src={image} alt="" width={120} height={120} /></span>
+      <span>{name}</span>
+    </Link>
+  );
+}
+
 export async function CategoryStrip() {
   const cats = await getCategories();
   if (!cats.ok || cats.value.length === 0) return null;
   return (
     <nav className="cat-strip" aria-label="Shop by category">
-      {cats.value.map((c) => {
-        const banner = CATEGORY_BANNER[c.slug];
-        return (
-          <Link key={c.id} href={`/category/${c.slug}`} className="cat-chip">
-            <span className="cat-chip-img"><SmartImage src={banner ? siteImage(banner, { w: 240, h: 240 }) : undefined} alt="" width={120} height={120} /></span>
-            <span>{c.name}</span>
-          </Link>
-        );
-      })}
+      {cats.value.map((c) => <CategoryChip key={c.id} slug={c.slug} name={c.name} />)}
     </nav>
   );
 }
@@ -119,4 +123,9 @@ export function SellerBanner() {
       <Link href="/become-a-seller" className="btn btn-primary">Open a store</Link>
     </section>
   );
+}
+
+async function firstImage(slug: string): Promise<string | undefined> {
+  const r = await getProducts({ sort: "newest", limit: 1, category: slug });
+  return r.ok ? r.value.items[0]?.image : undefined;
 }
