@@ -21,7 +21,7 @@ export async function workerTickHandler(req: Request): Promise<Response> {
   const given = (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
   if (!given || !sameSecret(given, secret)) return json(401, { error: "unauthorized" });
   try {
-    const result = await runWorkerTick();
+    const result = await runWorkerTick(8_000);
     logger.info("worker tick", { ...result });
     return json(200, { ok: true, ...result });
   } catch (e) {
